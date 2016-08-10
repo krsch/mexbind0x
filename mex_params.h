@@ -6,6 +6,7 @@
 #include <typeinfo>
 #include <memory>
 #include <cstring>
+#include <map>
 
 class Reader {
     public:
@@ -333,3 +334,36 @@ void mexIt(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     save_tuple(res_t, nlhs, plhs);
 }
 
+struct MexCommands {
+    typedef void (*command)(int,mxArray**,int,const mxArray**);
+    std::map<std::string, std::vector<std::pair<int,command>>> commands;
+
+    template<typename T, T* f>
+        void add(const char *name) {
+            std::string s(name);
+            int nlhs = std::tuple_size<typename to_tuple<typename return_of<T>::type>::type>::value;
+            commands[s].push_back({nlhs, mexIt<T,f>});
+        }
+
+    void dispatch(int nlhs, mxArray** plhs, int nrhs, const mxArray** prhs) {
+        if (nrhs < 1 || !mxIsChar(prhs[0]))
+            throw std::invalid_argument("First argument should be a command");
+        char *command_s = mxArrayToString(prhs[0]);
+        std::string com(command_s);
+        mxFree(command_s);
+        auto it = commands.find(com);
+        if (it == commands.end())
+            throw std::invalid_argument("Unknown command");
+        if (nlhs == 0) nlhs = 1;
+        int best_n = 0;
+        command best;
+        for (auto &c : it->second)
+            if (c.first <= nlhs && c.first >= best_n) {
+                best_n = c.first;
+                best = c.second;
+            }
+        best(nlhs, plhs, nrhs-1, prhs+1);
+    }
+};
+
+#define ADD_COMMAND(c,f,name) c.add<decltype(f),f>(name)
