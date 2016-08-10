@@ -91,6 +91,7 @@ struct MXArray {
     int get_idx(int n, const mwSize*) {
         if (n != 0)
             throw std::out_of_range("bad number of dimensions");
+        return 0;
     }
 
     template<typename T, typename ... Args>
@@ -237,6 +238,12 @@ struct args_of<R (Args...)> {
     typedef std::tuple<Args...> type;
 };
 
+template<typename T> struct return_of;
+template<typename R, typename ... Args>
+struct return_of<R (Args...)> {
+    typedef R type;
+};
+
 template<int i, int n, typename T, T* f>
 typename std::enable_if< i<n >::type
 fillParamsIdx(MexParams& params, typename args_of<T>::type& tup)
@@ -248,7 +255,7 @@ fillParamsIdx(MexParams& params, typename args_of<T>::type& tup)
         for (int j=i; j>0 && s!=0; j--) s = strchr(s+1, ',');
         if (s!=0) {
             const char *end = strchr(s+1,',');
-            if (end == 0) name.assign(s+1, s+strlen(s)-1); 
+            if (end == 0) name.assign(s+1, s+strlen(s)-1);
             else name.assign(s+1,end);
         }
     }
@@ -264,11 +271,65 @@ fillParamsIdx(MexParams& params, typename args_of<T>::type& tup) {}
 #define EXPORT(ret,f,args) ret f args; NAMES(f,#args); ret f args
 #define DESCRIBE(f,i,val) template<> struct mex_description<decltype(f), f,i> { static constexpr const char *v = val; }
 
+//http://stackoverflow.com/questions/7858817/unpacking-a-tuple-to-call-a-matching-function-pointer
+template<int ...>
+struct seq { };
+
+template<int N, int ...S>
+struct gens : gens<N-1, N-1, S...> { };
+
+template<int ...S>
+struct gens<0, S...> {
+  typedef seq<S...> type;
+};
+
+template<typename F, typename Tup, int ...S>
+typename return_of<F>::type callFunc(F *func, const Tup& params, seq<S...>) {
+    return func(std::get<S>(params) ...);
+}
+
+template<typename T>
+struct to_tuple {
+    typedef std::tuple<T> type;
+};
+template<typename ... Args>
+struct to_tuple<std::tuple<Args...>> {
+    typedef std::tuple<Args...> type;
+};
+
+template<typename T>
+mxArray *to_mx_array(T* arg) {
+    mxArray *res = mxCreateNumericMatrix(sizeof(arg), 1, mxINT8_CLASS, mxREAL);
+    *(T**)mxGetData(res) = arg;
+    return res;
+}
+
+template<int i=0, typename Tup>
+typename std::enable_if< i == std::tuple_size<Tup>::value, void>::type
+save_tuple(const Tup &tup, int nlhs, mxArray *plhs[])
+{}
+
+template<int i=0, typename Tup>
+typename std::enable_if< i < std::tuple_size<Tup>::value, void>::type
+save_tuple(const Tup &tup, int nlhs, mxArray *plhs[])
+{
+    if (i < nlhs || i==0 && nlhs==0) {
+        plhs[i] = to_mx_array(std::get<i>(tup));
+        save_tuple<i+1,Tup>(tup, nlhs, plhs);
+    }
+}
+
 template<typename F, F* f>
-void mexIt(int nrhs, const mxArray *prhs[]) {
+void mexIt(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     typedef typename args_of<F>::type Args;
+    typedef typename return_of<F>::type Result;
+    typedef typename gens<std::tuple_size<Args>::value>::type Seq;
     Args args;
     MexParams params("");
     fillParamsIdx<0, std::tuple_size<Args>::value, F, f>(params, args);
     params.parse(nrhs, prhs);
+    Result res = callFunc(f,args,Seq());
+    typename to_tuple<Result>::type res_t(res);
+    save_tuple(res_t, nlhs, plhs);
 }
+
