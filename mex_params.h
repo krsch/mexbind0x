@@ -1,9 +1,9 @@
 #pragma once
+#include "mex_cast.h"
 #include <mex.h>
 #include <stdexcept>
 #include <complex>
 #include <vector>
-#include <typeinfo>
 #include <memory>
 #include <cstring>
 #include <map>
@@ -15,51 +15,18 @@ class Reader {
         virtual const char* description() const = 0;
 };
 
-template<typename T, T val> struct static_val {
-    static constexpr T v = val;
-};
-
-template<typename T> struct get_mex_classid;
-
-template<> struct get_mex_classid<int8_t> : static_val<mxClassID, mxINT8_CLASS> {};
-template<> struct get_mex_classid<uint8_t> : static_val<mxClassID, mxUINT8_CLASS> {};
-template<> struct get_mex_classid<int16_t> : static_val<mxClassID, mxINT16_CLASS> {};
-template<> struct get_mex_classid<uint16_t> : static_val<mxClassID, mxUINT16_CLASS> {};
-template<> struct get_mex_classid<int32_t> : static_val<mxClassID, mxINT32_CLASS> {};
-template<> struct get_mex_classid<uint32_t> : static_val<mxClassID, mxUINT32_CLASS> {};
-template<> struct get_mex_classid<float> : static_val<mxClassID, mxSINGLE_CLASS> {};
-template<> struct get_mex_classid<double> : static_val<mxClassID, mxDOUBLE_CLASS> {};
-template<> struct get_mex_classid<mxChar> : static_val<mxClassID, mxCHAR_CLASS> {};
-template<> struct get_mex_classid<mxLogical> : static_val<mxClassID, mxLOGICAL_CLASS> {};
-
 //template<typename T>
 //struct get_mex_classid<std::complex<T>> : get_mex_classid<T> {};
 
 template<typename T>
 bool mex_is_class(mxArray *arg) {
-    return get_mex_classid<T>::v == mxGetClassID(arg);
+    return get_mex_classid<T>::value == mxGetClassID(arg);
 }
 
-template<typename T> T cast_ptr(const mxArray* m, void *ptr, int offset = 0) {
-    mxClassID id = mxGetClassID(m);
-    switch (id) {
-        case mxINT8_CLASS: return (T)*(offset + (int8_t*)ptr);
-        case mxUINT8_CLASS: return (T)*(offset + (uint8_t*)ptr);
-        case mxINT16_CLASS: return (T)*(offset + (int16_t*)ptr);
-        case mxUINT16_CLASS: return (T)*(offset + (uint16_t*)ptr);
-        case mxINT32_CLASS: return (T)*(offset + (int32_t*)ptr);
-        case mxUINT32_CLASS: return (T)*(offset + (uint32_t*)ptr);
-        case mxSINGLE_CLASS: return (T)*(offset + (float*)ptr);
-        case mxDOUBLE_CLASS: return (T)*(offset + (double*)ptr);
-        case mxCHAR_CLASS: return (T)*(offset + (mxChar*)ptr);
-        case mxLOGICAL_CLASS: return (T)*(offset + (mxLogical*)ptr);
-        default:
-            std::string s("Cannot convert ");
-            s = s + mxGetClassName(m) + " to " + typeid(T).name();
-            throw std::invalid_argument(s);
-    };
-}
-
+//template<typename T, mxClassID value = get_mex_classid<T>::value>
+//constexpr bool mxIsPrim() {
+    //return value != mxUNKNOWN_CLASS;
+//}
 struct MXArray {
     const mxArray *m;
     template<typename T, typename ... Args>
@@ -101,37 +68,9 @@ struct MXArray {
         }
 };
 
-//template<typename T> T mex_cast(const mxArray *arg);
-
 template<typename T, typename = typename std::enable_if<std::is_same<T,MXArray>::value>::type>
 MXArray mex_cast(const mxArray *m) {
     return MXArray{m};
-}
-
-template<typename T> struct is_complex;
-
-template<typename T> struct is_complex<std::complex<T>> {
-    typedef T type;
-    static constexpr bool v = true;
-};
-
-template<typename T>
-typename std::enable_if<is_complex<T>::v, T >::type
-mex_cast(const mxArray *arg)
-{
-    if (!mxIsScalar(arg))
-        throw std::invalid_argument("should be scalar");
-    typedef typename is_complex<T>::type U;
-    return T(cast_ptr<T>(arg, mxGetData(arg)), cast_ptr<T>(arg, mxGetImagData(arg)));
-}
-
-template<typename T>
-typename std::enable_if<get_mex_classid<T>::v >=0, T>::type
-mex_cast(const mxArray *arg)
-{
-    if (!mxIsScalar(arg))
-        throw std::invalid_argument("should be scalar");
-    return cast_ptr<T>(arg, mxGetData(arg));
 }
 
 template<typename T>
@@ -233,17 +172,29 @@ struct mex_description {
     static constexpr const char *v = 0;
 };
 
+template<typename T, typename Enable = void> struct mx_decay_t : std::decay<T> {};
+template<typename T>
+struct mx_decay_t<T, typename std::enable_if<mx_store_by_move<T>::value>::type>
+{
+    typedef T type;
+};
+template<typename T>
+using mx_decay = typename mx_decay_t<T>::type;
+
 template<typename T> struct args_of;
 template<typename R, typename ... Args>
 struct args_of<R (Args...)> {
-    typedef std::tuple<Args...> type;
+    typedef std::tuple<mx_decay<Args>...> type;
 };
 
-template<typename T> struct return_of;
+template<typename T> struct return_of_t;
 template<typename R, typename ... Args>
-struct return_of<R (Args...)> {
+struct return_of_t<R (Args...)> {
     typedef R type;
 };
+
+template<typename T>
+using return_of = typename return_of_t<T>::type;
 
 template<int i, int n, typename T, T* f>
 typename std::enable_if< i<n >::type
@@ -285,7 +236,7 @@ struct gens<0, S...> {
 };
 
 template<typename F, typename Tup, int ...S>
-typename return_of<F>::type callFunc(F *func, const Tup& params, seq<S...>) {
+return_of<F> callFunc(F *func, const Tup& params, seq<S...>) {
     return func(std::get<S>(params) ...);
 }
 
@@ -298,40 +249,51 @@ struct to_tuple<std::tuple<Args...>> {
     typedef std::tuple<Args...> type;
 };
 
-template<typename T>
-mxArray *to_mx_array(T* arg) {
-    mxArray *res = mxCreateNumericMatrix(sizeof(arg), 1, mxINT8_CLASS, mxREAL);
-    *(T**)mxGetData(res) = arg;
-    return res;
-}
-
 template<int i=0, typename Tup>
 typename std::enable_if< i == std::tuple_size<Tup>::value, void>::type
-save_tuple(const Tup &tup, int nlhs, mxArray *plhs[])
+save_tuple(Tup &&tup, int nlhs, mxArray *plhs[])
 {}
 
 template<int i=0, typename Tup>
 typename std::enable_if< i < std::tuple_size<Tup>::value, void>::type
-save_tuple(const Tup &tup, int nlhs, mxArray *plhs[])
+save_tuple(Tup &&tup, int nlhs, mxArray *plhs[])
 {
     if (i < nlhs || i==0 && nlhs==0) {
         plhs[i] = to_mx_array(std::get<i>(tup));
-        save_tuple<i+1,Tup>(tup, nlhs, plhs);
+        save_tuple<i+1,Tup&&>(std::move(tup), nlhs, plhs);
     }
 }
 
 template<typename F, F* f>
-void mexIt(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+return_of<F> runIt(int nrhs, const mxArray *prhs[]) {
     typedef typename args_of<F>::type Args;
-    typedef typename return_of<F>::type Result;
     typedef typename gens<std::tuple_size<Args>::value>::type Seq;
     Args args;
     MexParams params("");
     fillParamsIdx<0, std::tuple_size<Args>::value, F, f>(params, args);
     params.parse(nrhs, prhs);
-    Result res = callFunc(f,args,Seq());
-    typename to_tuple<Result>::type res_t(res);
-    save_tuple(res_t, nlhs, plhs);
+    return callFunc(f,args,Seq());
+}
+
+template<typename F, F* f>
+typename std::enable_if<std::is_same<return_of<F>,void>::value>::type
+mexIt(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+    runIt<F,f>(nrhs, prhs);
+}
+
+template<typename F, F* f>
+typename std::enable_if<0 < std::tuple_size<return_of<F> >::value,void>::type
+mexIt(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+    typedef return_of<F> Result;
+    Result res = runIt<F,f>(nrhs, prhs);
+    save_tuple(std::move(res), nlhs, plhs);
+}
+
+template<typename F, F* f>
+typename std::enable_if<!std::is_same<return_of<F>,void>::value>::type
+mexIt(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+    auto res = runIt<F,f>(nrhs, prhs);
+    plhs[0] = to_mx_array(std::move(res));
 }
 
 struct MexCommands {
@@ -341,7 +303,7 @@ struct MexCommands {
     template<typename T, T* f>
         void add(const char *name) {
             std::string s(name);
-            int nlhs = std::tuple_size<typename to_tuple<typename return_of<T>::type>::type>::value;
+            int nlhs = std::tuple_size<typename to_tuple<return_of<T>>::type>::value;
             commands[s].push_back({nlhs, mexIt<T,f>});
         }
 
