@@ -8,6 +8,7 @@
 #include <stdexcept>
 
 template<typename T> struct get_mex_classid;
+using matlab_string = std::basic_string<mxChar>;
 
 template<> struct get_mex_classid<int8_t> : std::integral_constant<mxClassID, mxINT8_CLASS> {};
 template<> struct get_mex_classid<uint8_t> : std::integral_constant<mxClassID, mxUINT8_CLASS> {};
@@ -113,6 +114,16 @@ mex_cast(const mxArray *arg)
     if (!mxIsInt8(arg) || mxGetNumberOfElements(arg) != sizeof(T))
         throw std::invalid_argument("Pointer should have been passed");
     return *(T*)mxGetData(arg);
+}
+
+template<typename T, typename = typename std::enable_if<std::is_same<T,matlab_string>::value>::type>
+matlab_string mex_cast(const mxArray *arg)
+{
+    if (!mxIsChar(arg))
+        throw std::invalid_argument("Expecting string");
+    const mxChar *m = mxGetChars(arg);
+    const int len = mxGetNumberOfElements(arg);
+    return matlab_string(m, len);
 }
 
 template<typename T>
