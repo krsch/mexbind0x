@@ -21,6 +21,7 @@ bool mex_is_class(mxArray *arg) {
 
 struct MXArray {
     const mxArray *m;
+    MXArray(const mxArray *m) : m(m) {}
     template<typename T, typename ... Args>
     T get (Args ... args) {
         const mwSize *dim = mxGetDimensions(m);
@@ -59,11 +60,6 @@ struct MXArray {
             return *dim * t + get_idx(n-1, dim+1, args...);
         }
 };
-
-template<typename T, typename = typename std::enable_if<std::is_same<T,MXArray>::value>::type>
-MXArray mex_cast(const mxArray *m) {
-    return MXArray{m};
-}
 
 template<typename T> struct return_of_t;
 template<typename R, typename ... Args>
@@ -121,7 +117,7 @@ auto count_args(types_t<T,T2,Args...>) {
 }
 
 template<typename R, typename ... Args>
-types_t<Args...> args_of(R f(Args...)) {
+types_t<std::decay_t<Args>...> args_of(R f(Args...)) {
     return {};
 }
 

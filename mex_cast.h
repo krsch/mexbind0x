@@ -126,6 +126,11 @@ matlab_string mex_cast(const mxArray *arg)
     return matlab_string(m, len);
 }
 
+template<typename T, typename = std::enable_if_t<!std::is_pointer<T>::value> >
+decltype(T((const mxArray*)nullptr)) mex_cast(const mxArray* a) {
+    return T(a);
+}
+
 template<typename T>
 typename mex_cast_visitor<T>::result_type
 mex_cast(const mxArray *arg)
