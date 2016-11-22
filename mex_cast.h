@@ -90,7 +90,9 @@ template<typename T> T cast_ptr(const mxArray* m, void *ptr, int offset = 0) {
     };
 }
 
-template<typename T> struct is_complex;
+template<typename T> struct is_complex {
+    static constexpr bool v = false;
+};
 
 template<typename T> struct is_complex<std::complex<T>> {
     typedef T type;
@@ -179,5 +181,18 @@ mex_cast(const mxArray *arg)
     if (!mxIsInt8(arg) || mxGetNumberOfElements(arg) != sizeof(T))
         throw std::invalid_argument("Pointer should have been passed");
     return *(T*)mxGetData(arg);
+}
+
+template<typename T>
+std::enable_if_t<!is_complex<T>::v,T> cast_ptr_complex(const mxArray * m, int idx) {
+    return cast_ptr<T>(m, mxGetData(m), idx);
+}
+
+template<typename T>
+std::enable_if_t<is_complex<T>::v> cast_ptr_complex(const mxArray * m, int idx) {
+    return T(
+            cast_ptr<T>(m, mxGetData(m), idx),
+            cast_ptr<T>(m, mxGetImagData(m), idx)
+            );
 }
 

@@ -10,18 +10,7 @@ struct MXArray {
         const mwSize *dim = mxGetDimensions(m);
         int n = mxGetNumberOfDimensions(m);
         int idx = get_idx(n,dim,args...);
-        return cast_ptr<T>(m, mxGetData(m), idx);
-    }
-
-    template<typename T, typename ... Args>
-    std::complex<T> getc (Args ... args) {
-        const mwSize *dim = mxGetDimensions(m);
-        int n = mxGetNumberOfDimensions(m);
-        int idx = get_idx(n,dim,args...);
-        return std::complex<T>(
-                cast_ptr<T>(m, mxGetData(m), idx),
-                cast_ptr<T>(m, mxGetImagData(m), idx)
-                );
+        return cast_ptr_complex<T>(m, idx);
     }
 
     template<typename T>
@@ -49,4 +38,12 @@ struct MXArray {
         }
 };
 
+template<typename T>
+struct MXTyped1DArray {
+    const mxArray *m;
+    MXTyped1DArray(const mxArray *m) : m(m) {}
 
+    T operator[](int idx) {
+        return cast_ptr_complex<T>(m,idx);
+    }
+};
