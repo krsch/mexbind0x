@@ -1,12 +1,9 @@
 #pragma once
 #include "mex_cast.h"
+#include "mex_array.h"
+#include "func_types.h"
 #include <mex.h>
 #include <stdexcept>
-#include <complex>
-#include <vector>
-#include <memory>
-#include <cstring>
-#include <map>
 
 class argument_cast_exception : std::exception {
     public:
@@ -18,81 +15,6 @@ template<typename T>
 bool mex_is_class(mxArray *arg) {
     return get_mex_classid<T>::value == mxGetClassID(arg);
 }
-
-struct MXArray {
-    const mxArray *m;
-    MXArray(const mxArray *m) : m(m) {}
-    template<typename T, typename ... Args>
-    T get (Args ... args) {
-        const mwSize *dim = mxGetDimensions(m);
-        int n = mxGetNumberOfDimensions(m);
-        int idx = get_idx(n,dim,args...);
-        return cast_ptr<T>(m, mxGetData(m), idx);
-    }
-
-    template<typename T, typename ... Args>
-    std::complex<T> getc (Args ... args) {
-        const mwSize *dim = mxGetDimensions(m);
-        int n = mxGetNumberOfDimensions(m);
-        int idx = get_idx(n,dim,args...);
-        return std::complex<T>(
-                cast_ptr<T>(m, mxGetData(m), idx),
-                cast_ptr<T>(m, mxGetImagData(m), idx)
-                );
-    }
-
-    template<typename T>
-        T get1(size_t idx) {
-            return cast_ptr<T>(m, mxGetData(m), idx);
-        }
-
-    template<typename T, typename ... Args>
-    T geti (Args ... args) {
-        const mwSize *dim = mxGetDimensions(m);
-        int n = mxGetNumberOfDimensions(m);
-        int idx = get_idx(n,dim,args...);
-        return cast_ptr<T>(m, mxGetImagData(m), idx);
-    }
-
-    int get_idx(int n, const mwSize*) {
-        if (n != 0)
-            throw std::out_of_range("bad number of dimensions");
-        return 0;
-    }
-
-    template<typename T, typename ... Args>
-        int get_idx(int n, const mwSize* dim, T t, Args ... args) {
-            return *dim * t + get_idx(n-1, dim+1, args...);
-        }
-};
-
-template<typename T, typename Enable = void> struct return_of_t;
-template<typename R, typename ... Args>
-struct return_of_t<R (Args...)> {
-    typedef R type;
-};
-template<typename R, typename ... Args>
-struct return_of_t<R (*)(Args...)> {
-    typedef R type;
-};
-template<typename F, typename R, typename ... Args>
-struct return_of_t<R (F::*)(Args...)> {
-    typedef R type;
-};
-template<typename F, typename R, typename ... Args>
-struct return_of_t<R (F::*)(Args...) const> {
-    typedef R type;
-};
-template<typename F, typename = decltype(&F::operator())>
-using is_functor = void;
-
-template<typename F>
-struct return_of_t<F,is_functor<F>> {
-    typedef typename return_of_t<decltype(&F::operator())>::type type;
-};
-
-template<typename T>
-using return_of = typename return_of_t<T>::type;
 
 template<int i=0, typename Tup>
 typename std::enable_if< i == std::tuple_size<Tup>::value, void>::type
@@ -107,53 +29,6 @@ save_tuple(Tup &&tup, int nlhs, mxArray *plhs[])
         plhs[i] = to_mx_array(std::get<i>(tup));
         save_tuple<i+1,Tup&&>(std::move(tup), nlhs, plhs);
     }
-}
-
-template<typename T>
-struct type_t {
-    typedef T type;
-};
-
-template<typename ... Args>
-struct types_t {
-    typedef std::tuple<Args...> tuple_t;
-    static constexpr int size = sizeof...(Args);
-};
-
-template<int i, typename T>
-types_t<std::pair<T,std::integral_constant<int,i>>> count_args(types_t<T>) {
-    return {};
-}
-
-template<typename T, typename ...Args>
-types_t<T,Args...>
-tuple_cons(type_t<T>, types_t<Args...>) { return {}; }
-
-template<int i=0, typename T, typename T2, typename ... Args>
-auto count_args(types_t<T,T2,Args...>) {
-    auto tail = count_args<i+1>(types_t<T2,Args...>());
-    type_t<std::pair<T, std::integral_constant<int,i>>> head;
-    return tuple_cons(head,tail);
-}
-
-template<typename F, typename R, typename ... Args>
-types_t<std::decay_t<Args>...> args_of_member(R (F::*f)(Args...)) {
-    return {};
-}
-
-template<typename F, typename R, typename ... Args>
-types_t<std::decay_t<Args>...> args_of_member(R (F::*f)(Args...) const) {
-    return {};
-}
-
-template<typename F, typename = decltype(&F::operator())>
-auto args_of(F f) {
-    return args_of_member(&F::operator());
-}
-
-template<typename R, typename ... Args>
-types_t<std::decay_t<Args>...> args_of(R f(Args...)) {
-    return {};
 }
 
 template<typename T>
