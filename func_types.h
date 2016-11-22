@@ -40,7 +40,7 @@ struct types_t {
     static constexpr int size = sizeof...(Args);
 };
 
-template<int i, typename T>
+template<int i=0, typename T>
 types_t<std::pair<T,std::integral_constant<int,i>>> count_args(types_t<T>) {
     return {};
 }
