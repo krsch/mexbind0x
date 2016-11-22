@@ -48,7 +48,7 @@ template<typename T, typename Enable = void>
 struct mex_cast_visitor;
 
 template<typename T>
-struct mex_cast_visitor<T,enable_if_prim<T> > {
+struct mex_cast_visitor<T, std::enable_if_t<std::is_arithmetic<T>::value> > {
     typedef T result_type;
     template<typename V>
         T run(const mxArray *m) {
@@ -128,8 +128,9 @@ matlab_string mex_cast(const mxArray *arg)
     return matlab_string(m, len);
 }
 
-template<typename T, typename = std::enable_if_t<!std::is_pointer<T>::value> >
-decltype(T((const mxArray*)nullptr)) mex_cast(const mxArray* a) {
+template<typename T>
+typename std::enable_if<T::can_mex_cast, T>::type
+mex_cast(const mxArray* a) {
     return T(a);
 }
 

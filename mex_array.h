@@ -5,6 +5,8 @@
 struct MXArray {
     const mxArray *m;
     MXArray(const mxArray *m) : m(m) {}
+    static constexpr bool can_mex_cast = true;
+
     template<typename T, typename ... Args>
     T get (Args ... args) {
         const mwSize *dim = mxGetDimensions(m);
@@ -41,6 +43,7 @@ struct MXArray {
 template<typename T>
 struct MXTyped1DArray {
     const mxArray *m;
+    static constexpr bool can_mex_cast = true;
     MXTyped1DArray(const mxArray *m) : m(m) {}
 
     T operator[](int idx) {
