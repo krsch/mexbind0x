@@ -163,6 +163,14 @@ enable_if_prim<typename T::value_type,mxArray *> to_mx_array(const T& arg) {
     return res;
 }
 
+template<typename V, typename T>
+mxArray *convert_to_mx_array(const T& arg) {
+    mxArray *res = mxCreateNumericMatrix(arg.size(), 1, get_mex_classid<V>::value, mxREAL);
+    V* ptr = (V*)mxGetData(res);
+    for (auto r : arg) *ptr++ = r;
+    return res;
+}
+
 template<typename T> struct mx_store_by_move : std::false_type {};
 #define STORED(x) template<> struct mx_store_by_move<x> : std::true_type {}
 
