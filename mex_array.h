@@ -1,10 +1,14 @@
 #pragma once
 #include "mex_cast.h"
 #include <complex>
+#include <stdexcept>
 
 struct MXArray {
     const mxArray *m;
-    MXArray(const mxArray *m) : m(m) {}
+    MXArray(const mxArray *m) : m(m) {
+        if (!mxIsNumeric(m))
+            throw std::invalid_argument("numeric array expected");
+    }
     static constexpr bool can_mex_cast = true;
 
     template<typename T, typename ... Args>
@@ -44,7 +48,10 @@ template<typename T>
 struct MXTyped1DArray {
     const mxArray *m;
     static constexpr bool can_mex_cast = true;
-    MXTyped1DArray(const mxArray *m) : m(m) {}
+    MXTyped1DArray(const mxArray *m) : m(m) {
+        if (!mxIsNumeric(m))
+            throw std::invalid_argument("numeric array expected");
+    }
 
     T operator[](int idx) {
         return cast_ptr_complex<T>(m,idx);
