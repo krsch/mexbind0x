@@ -76,3 +76,14 @@ types_t<std::decay_t<Args>...> args_of(R f(Args...)) {
     return {};
 }
 
+template<typename T>
+void deleter(T* arg) {
+    delete arg;
+}
+
+template<typename T>
+void deleter2(const T& arg)
+{
+    arg.~T();
+}
+
