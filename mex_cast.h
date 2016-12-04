@@ -6,9 +6,25 @@
 #include <string>
 #include <complex>
 #include <stdexcept>
+#include <memory>
+#ifdef __GNUC__
+#include <cxxabi.h>
+#endif
 
 template<typename T> struct get_mex_classid;
 using matlab_string = std::basic_string<mxChar>;
+
+template<typename T>
+std::string get_type_name() {
+    const char *name = typeid(T).name();
+#ifdef __GNUC__
+    int status;
+    std::unique_ptr<char, decltype(std::free) *>
+        demangled(abi::__cxa_demangle(name, 0, 0, &status), std::free);
+    name = &*demangled;
+#endif
+    return {name};
+}
 
 template<> struct get_mex_classid<int8_t> : std::integral_constant<mxClassID, mxINT8_CLASS> {};
 template<> struct get_mex_classid<uint8_t> : std::integral_constant<mxClassID, mxUINT8_CLASS> {};
@@ -85,7 +101,8 @@ template<typename T> T cast_ptr(const mxArray* m, void *ptr, int offset = 0) {
         case mxLOGICAL_CLASS: return (T)*(offset + (mxLogical*)ptr);
         default:
             std::string s("Cannot convert ");
-            s = s + mxGetClassName(m) + " to " + typeid(T).name();
+            const char *name = typeid(T).name();
+            s = s + mxGetClassName(m) + " to " + name;
             throw std::invalid_argument(s);
     };
 }
@@ -138,7 +155,12 @@ template<typename T>
 typename mex_cast_visitor<T>::result_type
 mex_cast(const mxArray *arg)
 {
-    return mex_visit(mex_cast_visitor<T>(),arg);
+    try{
+        return mex_visit(mex_cast_visitor<T>(),arg);
+    } catch (...) {
+        std::throw_with_nested(std::invalid_argument(
+                "while converting to " + get_type_name<T>()));
+    }
 }
 
 template<typename T>
