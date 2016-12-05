@@ -24,6 +24,7 @@ class MXCommands {
     int nargin;
     const mxArray **argin;
     std::string command;
+    bool matched = false;
     public:
         MXCommands(int nargout, mxArray *argout[], int nargin, const mxArray *argin[])
             : nargout(nargout), argout(argout), nargin(nargin-1), argin(argin+1)
@@ -39,6 +40,7 @@ class MXCommands {
         MXCommands& on(const char *command_, F&& f) {
             if (command == command_)
                 try {
+                    matched = true;
                     mexIt(f,nargout, argout, nargin, argin);
                 } catch (const std::exception &e) {
                     std::throw_with_nested(
@@ -54,6 +56,7 @@ class MXCommands {
         MXCommands& on_varargout(const char *command_, F&& f) {
             if (command == command_) {
                 try {
+                    matched = true;
                     std::vector<mxArray *> res = runIt(wrap_varargout(f,nargout,args_of(f)),nargin,argin);
                     if (nargout != res.size() && (nargout != 0 || res.size() != 1))
                         throw std::invalid_argument("cannot assign all output arguments");
@@ -72,5 +75,9 @@ class MXCommands {
 
         const std::string& get_command() {
             return command;
+        }
+
+        bool has_matched() const {
+            return matched;
         }
 };

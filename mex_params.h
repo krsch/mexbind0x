@@ -73,7 +73,10 @@ template<typename F>
 auto runIt(F f, int nrhs, const mxArray *prhs[]) {
     auto counted_args = count_args(args_of(f));
     if (counted_args.size != nrhs)
-        throw std::invalid_argument("number of arguments mismatch");
+        throw std::invalid_argument(stringer(
+                    "number of arguments mismatch: expected ", (int)counted_args.size,
+                    ", received", nrhs
+                    ));
     return callFuncArgs(f, prhs, counted_args);
 }
 

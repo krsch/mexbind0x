@@ -57,6 +57,20 @@ typename F::result_type mex_visit(F f, const mxArray* m) {
     };
 }
 
+template<typename F>
+struct mex_visit2_call {
+    F f;
+    using result_type = decltype(f((double*)0,(double*)0,(const mxArray*)0));
+    template<typename T>
+        result_type run(const mxArray *m) {
+            return f((T*)mxGetData(m), (T*)mxGetImagData(m), m);
+        }
+};
+template<typename F>
+auto mex_visit2(F f, const mxArray *m) {
+    return mex_visit(mex_visit2_call<F>{f}, m);
+}
+
 template<typename T, typename Type = void>
 using enable_if_prim = typename std::enable_if<get_mex_classid<T>::value != mxUNKNOWN_CLASS, Type>::type;
 

@@ -40,7 +40,9 @@ struct MXArray {
 
     template<typename T, typename ... Args>
         int get_idx(int n, const mwSize* dim, T t, Args ... args) {
-            return *dim * t + get_idx(n-1, dim+1, args...);
+            if (t < 0 || t >= *dim)
+                throw std::out_of_range("MXArray index out of range");
+            return t + *dim * get_idx(n-1, dim+1, args...);
         }
 };
 
