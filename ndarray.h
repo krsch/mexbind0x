@@ -34,8 +34,10 @@ namespace limits {
 
 template<typename T, int N>
 struct NDArrayView {
-    T* data;
+    T* m_data;
     NDArrayViewDimension dimensions[N];
+
+    NDArrayView() = default;
 
     template<typename IdxVec, typename = typename std::enable_if<!std::is_integral<IdxVec>::value>::type>
     T& operator() (const IdxVec& idx) const {
@@ -45,7 +47,7 @@ struct NDArrayView {
                 throw std::out_of_range("NDArrayView::() index out of range");
             j += idx[i]*dimensions[i].strife;
         }
-        return data[j];
+        return m_data[j];
     }
 
     template<typename ... Args>
@@ -64,7 +66,7 @@ struct NDArrayView {
     template<typename... Args>
     T& operator() (Args... args) const {
         static_assert(sizeof...(args) == N, "NDArrayView::() bad number of indexes");
-        return data[count_offset(0, std::forward<Args>(args)...)];
+        return m_data[count_offset(0, std::forward<Args>(args)...)];
     }
 
     size_t max(size_t i) const {
@@ -166,10 +168,25 @@ struct NDArrayView {
         return res;
     }
 
+    T* data() const {
+        assert(N == 1 && dimensions[0].strife == 1);
+        return m_data;
+    }
+
+    typename std::conditional<N==1,T&,NDArrayView<T,N-1>>::type
+    operator[](int i) const {
+        return ndarray_curry(*this,i);
+    }
+
+    size_t size() const {
+        assert(N == 1);
+        return dimensions[0].maxIdx;
+    }
+
 #ifdef MATLAB_MEX_FILE
     NDArrayView(const mxArray* a)
     {
-        data = (T*)mxGetData(a);
+        m_data = (T*)mxGetData(a);
         if (N == 1) {
             if (mxGetNumberOfDimensions(a) > 2)
                 throw std::invalid_argument("one-dimensional array expected");
@@ -202,7 +219,7 @@ void limitNDArrayView(NDArrayView<T,N>& dst, const NDArrayViewDimension *src_dim
 {
     if (fix >= src_dim->maxIdx)
         throw std::out_of_range("NDArrayView::limit index out of range");
-    dst.data += src_dim->strife * fix;
+    dst.m_data += src_dim->strife * fix;
     limitNDArrayView(dst, src_dim+1, offset, std::forward<Args>(args)...);
 }
 
@@ -215,7 +232,7 @@ void limitNDArrayView(NDArrayView<T,N>& dst, const NDArrayViewDimension *src_dim
         throw std::out_of_range("NDArrayView::limit max out of range");
     if (lim.first >= lim.second)
         throw std::out_of_range("NDArrayView::limit min>max");
-    dst.data += src_dim->strife * lim.first;
+    dst.m_data += src_dim->strife * lim.first;
     dst.dimensions[offset].strife = src_dim->strife;
     dst.dimensions[offset].maxIdx = lim.second-lim.first;
     limitNDArrayView(dst, src_dim+1, offset+1, std::forward<Args>(args)...);
@@ -230,7 +247,7 @@ template<typename T, int N, class ... Args>
 NDArrayView<T, N-count_ints<Args...>::value> limit(const NDArrayView<T,N>& view, Args && ... args) {
     static_assert(sizeof...(args) == N, "You must specify all dimensions in limit");
     NDArrayView<T, N-count_ints<Args...>::value> res;
-    res.data = view.data;
+    res.m_data = view.m_data;
     limitNDArrayView(res, view.dimensions, 0, std::forward<Args>(args)...);
     return res;
 }
@@ -240,7 +257,7 @@ NDArrayView<T,sizeof...(Args)> makeNDArrayViewFromCArray(T* array, Args&& ... ar
 {
     NDArrayView<T, sizeof...(Args)> result;
     size_t maxIdx[sizeof...(Args)] = {static_cast<size_t>(args)...};
-    result.data = array;
+    result.m_data = array;
     int mult = 1;
     for (int i=sizeof...(Args)-1; i>=0; i--) {
         result.dimensions[i].maxIdx = maxIdx[i];
@@ -249,3 +266,52 @@ NDArrayView<T,sizeof...(Args)> makeNDArrayViewFromCArray(T* array, Args&& ... ar
     }
     return result;
 }
+
+template<typename T, int N>
+typename std::enable_if<(N>1), NDArrayView<T,N-1> >::type
+ndarray_curry(const NDArrayView<T,N> &a, int fix)
+{
+    if (fix< 0 || (size_t)fix >= a.dimensions[0].maxIdx)
+        throw std::out_of_range("NDArrayView::limit index out of range");
+    NDArrayView<T, N-1> result;
+    result.m_data = a.m_data + a.dimensions[0].strife * fix;
+    for (int i=0; i<N-1; i++)
+        result.dimensions[i] = a.dimensions[i+1];
+    return result;
+}
+
+template<typename T>
+T& ndarray_curry(const NDArrayView<T,1> &a, int fix)
+{
+    return a(fix);
+}
+
+
+/* It would be great to construct a view based on a vector<vector<...>>,
+ * But the current memory layout doesn't allow this
+template<typename T>
+struct ndvector_type {
+    using type = T;
+};
+
+template<typename T>
+struct ndvector_type<std::vector<T>> {
+    using type = T;
+};
+
+template<typename T>
+using ndvector_type_t = typename ndvector_type<T>::type;
+
+template<typename T>
+struct ndvector_rank : public std::integral_constant<size_t, 0> {};
+
+template<typename T>
+struct ndvector_rank<std::vector<T>>
+    : public std::integral_constant<size_t, ndvector_rank<T>::value+1> {};
+
+template<typename T>
+NDArrayView<ndvector_type_t<T>, ndvector_rank<T>::value>
+makeNDArrayView(const std::vector<T> &v)
+{
+}
+*/
