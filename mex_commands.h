@@ -25,6 +25,7 @@ class MXCommands {
     const mxArray **argin;
     std::string command;
     bool matched = false;
+    std::string classname_read;
     public:
         MXCommands(int nargout, mxArray *argout[], int nargin, const mxArray *argin[])
             : nargout(nargout), argout(argout), nargin(nargin-1), argin(argin+1)
@@ -34,6 +35,26 @@ class MXCommands {
             char *command_s = mxArrayToString(argin[0]);
             command = command_s;
             mxFree(command_s);
+        }
+
+        template<typename T>
+        MXCommands& on_class(const char *classname) {
+            if (nargin > 1 && mxIsChar(argin[0]) && classname_read.size() == 0) {
+                char *arg1_s = mxArrayToString(argin[0]);
+                classname_read = arg1_s;
+                mxFree(arg1_s);
+            }
+            if (classname == classname_read) {
+                matched = true;
+                if (command == "_free") {
+                    delete mex_cast<T*>(argin[1]);
+                } else if (command == "_saveobj") {
+                    argout[0] = to_mx_array(*mex_cast<T*>(argin[1]));
+                } else if (command == "_loadobj") {
+                    argout[0] = to_mx_array(new T(mex_cast<T>(argin[1])));
+                } else matched = false;
+            }
+            return *this;
         }
 
         template<typename F>

@@ -87,3 +87,36 @@ void deleter2(const T& arg)
     arg.~T();
 }
 
+#include <vector>
+template<typename T>
+struct vector_rank : public std::integral_constant<size_t, 0> {};
+template<typename T>
+struct vector_rank<std::vector<T>> 
+    : public std::integral_constant<size_t, vector_rank<T>::value + 1> {};
+
+void calc_ndvector_size(...) {}
+
+template<typename T, typename It>
+void calc_ndvector_size(It it, const std::vector<T> &vec) {
+    *it = vec.size();
+    //for (const T &v : vec)
+        //if (v.size() != vec[0].size())
+            //throw std::invalid_argument("ndvector_size does only accepts rectangular-like multidimensional vectors");
+    calc_ndvector_size(it+1, vec[0]);
+}
+
+template<typename T>
+std::vector<size_t> ndvector_size(const std::vector<T> &vec)
+{
+    std::vector<size_t> res(vector_rank<T>::value+1);
+    calc_ndvector_size(res.begin(), vec);
+    return res;
+}
+
+template<typename T>
+struct ndvector_value_type : public type_t<T> {};
+template<typename T>
+struct ndvector_value_type<std::vector<T>> 
+    : public ndvector_value_type<T> {};
+template<typename T>
+using ndvector_value_type_t = typename ndvector_value_type<T>::type;
