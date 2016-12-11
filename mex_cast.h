@@ -341,6 +341,10 @@ std::enable_if_t<is_complex<T>::value> cast_ptr_complex(const mxArray * m, int i
             );
 }
 
+class CellSaver;
+template<typename T, typename = decltype(save_load(std::declval<CellSaver&>(), std::declval<T&>()))>
+mxArray* to_mx_array(const T& t);
+
 class CellSaver {
     std::vector<mx_array_t> cells;
 public:
@@ -354,13 +358,13 @@ public:
         return {(mxArray *)*this};
     }
     template<typename T>
-    CellSaver& operator<<(T&& t) {
-        cells.push_back(to_mx_array(std::forward<T>(t)));
+    CellSaver& operator<<(const T& t) {
+        cells.push_back(to_mx_array(t));
         return *this;
     }
     template<typename T>
-        CellSaver& operator&(T&& t) {
-            return *this << std::forward<T>(t);
+        CellSaver& operator&(const T& t) {
+            return *this << std::forward<const T&>(t);
         }
 };
 
@@ -380,7 +384,7 @@ public:
         }
 };
 
-template<typename T, typename = decltype(save_load(std::declval<CellSaver&>(), std::declval<T&>()))>
+template<typename T, typename>
 mxArray* to_mx_array(const T& t) {
     CellSaver c;
     save_load(c,const_cast<T&>(t));
