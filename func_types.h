@@ -71,6 +71,16 @@ auto args_of(F f) {
     return args_of_member(&F::operator());
 }
 
+template<typename F, typename R, typename ... Args>
+types_t<F*,std::decay_t<Args>...> args_of(R (F::*f)(Args...)) {
+    return {};
+}
+
+template<typename F, typename R, typename ... Args>
+types_t<F*,std::decay_t<Args>...> args_of(R (F::*f)(Args...) const) {
+    return {};
+}
+
 template<typename R, typename ... Args>
 types_t<std::decay_t<Args>...> args_of(R f(Args...)) {
     return {};

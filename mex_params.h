@@ -66,8 +66,16 @@ typename T::first_type get_array(const mxArray* a[]) {
 }
 
 template<typename F, typename ... Args>
-auto callFuncArgs(F f, const mxArray* prhs[], types_t<Args...>) {
+auto callFuncArgs(F f, const mxArray* prhs[], types_t<Args...>)
+-> decltype(f(get_array<Args>(prhs)...))
+{
     return f(get_array<Args>(prhs)...);
+}
+
+template<typename F, typename ... Args, typename = std::enable_if_t<std::is_member_pointer<F>::value > >
+auto callFuncArgs(F f, const mxArray* prhs[], types_t<Args...>)
+{
+    return std::bind(f, get_array<Args>(prhs)...)(); // as std::invoke is in c++17
 }
 
 template<typename F>
