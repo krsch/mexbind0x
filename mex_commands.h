@@ -18,6 +18,34 @@ auto wrap_varargout(F&& f, int nargout, types_t<int,Args...>)
     };
 }
 
+class mx_auto {
+private:
+    mxArray * val;
+public:
+    template<typename T>
+    mx_auto(T&& val) : val(to_mx(std::forward<T>(val))) {}
+
+    mx_auto(mxArray *val) : val(val) {}
+
+    template<typename T, typename U>
+    static mx_auto as(U&& val) {
+        return mx_auto(to_mx_as<T>(std::forward<U>(val)));
+    }
+
+    template<typename T>
+    operator T() const {
+        return from_mx<T>(val);
+    }
+
+    operator mxArray*() {
+        return val;
+    }
+
+    operator const mxArray*() const {
+        return val;
+    }
+};
+
 // MXCommands allows you to dispatch a function based on argin[0]
 class MXCommands {
     int nargout;
@@ -79,7 +107,7 @@ class MXCommands {
             if (command == command_) {
                 try {
                     matched = true;
-                    std::vector<mxArray *> res = runIt(wrap_varargout(f,nargout,args_of(f)),nargin,argin);
+                    std::vector<mx_auto> res = runIt(wrap_varargout(f,nargout,args_of(f)),nargin,argin);
                     if (nargout != res.size() && (nargout != 0 || res.size() != 1))
                         throw std::invalid_argument("cannot assign all output arguments");
                     for (int i=0;i <res.size(); i++)
