@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <sstream>
 
+namespace mexbind0x {
 // http://stackoverflow.com/questions/21806561/concatenating-strings-and-numbers-in-variadic-template-function
 template< typename ... Args >
 std::string stringer(Args const& ... args )
@@ -40,7 +41,7 @@ save_tuple(Tup &&tup, int nlhs, mxArray *plhs[])
 {}
 
 template<int i=0, typename Tup>
-typename std::enable_if< i < std::tuple_size<Tup>::value, void>::type
+typename std::enable_if< (i < std::tuple_size<Tup>::value), void>::type
 save_tuple(Tup &&tup, int nlhs, mxArray *plhs[])
 {
     if (i < nlhs || (i==0 && nlhs==0)) {
@@ -129,4 +130,5 @@ void flatten_exception_str(std::ostringstream &s, const std::exception &e) {
     }
     mexErrMsgTxt(c);
     throw std::invalid_argument(c); // CANNOT be reached
+}
 }

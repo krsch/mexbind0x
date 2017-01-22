@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+namespace mexbind0x {
 class command_required : std::exception {
     public:
         using exception::exception;
@@ -102,3 +103,4 @@ class MXCommands {
             return matched;
         }
 };
+}

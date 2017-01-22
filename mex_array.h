@@ -3,6 +3,7 @@
 #include <complex>
 #include <stdexcept>
 
+namespace mexbind0x {
 struct MXArray {
     const mxArray *m;
     MXArray(const mxArray *m) : m(m) {
@@ -59,3 +60,4 @@ struct MXTyped1DArray {
         return cast_ptr_complex<T>(m,idx);
     }
 };
+}

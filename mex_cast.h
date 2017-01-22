@@ -15,6 +15,7 @@
 #endif
 #include "func_types.h"
 
+namespace mexbind0x {
 template<typename T> struct get_mex_classid;
 using matlab_string = std::basic_string<mxChar>;
 
@@ -210,18 +211,18 @@ mex_cast(const mxArray *arg)
 }
 
 template<typename T, typename U>
+std::enable_if_t<(vector_rank<T>::value == 1),T>
+make_ndvector(NDArrayView<U,vector_rank<T>::value> v) {
+    return T(v.begin(), v.end());
+}
+
+template<typename T, typename U>
 std::enable_if_t<(vector_rank<T>::value > 1),T>
 make_ndvector(NDArrayView<U,vector_rank<T>::value> v) {
     T res(v.max(0));
     for (int i=0; i<res.size(); i++)
         res[i] = make_ndvector<typename T::value_type>(v[i]);
     return res;
-}
-
-template<typename T, typename U>
-std::enable_if_t<(vector_rank<T>::value == 1),T>
-make_ndvector(NDArrayView<U,vector_rank<T>::value> v) {
-    return T(v.begin(), v.end());
 }
 
 template<typename T>
@@ -256,20 +257,20 @@ enable_if_prim<typename T::value_type,mxArray *> to_mx_array(const T& arg) {
     return res;
 }
 
-template<typename T>
-void assign_ndvector(const std::vector<T> &vec, std::vector<mwIndex> iterator, int idx, mxArray *m) {
-    for (int i=0; i<vec.size(); i++) {
-        iterator[idx] = i;
-        assign_ndvector(vec[i], iterator, idx+1, m);
-    }
-}
-
 template<typename T, typename = enable_if_prim<T> >
 void assign_ndvector(T val, std::vector<mwIndex> iterator, int idx, mxArray *m) {
     assert(idx == iterator.size());
     T *data = (T*)mxGetData(m);
     mwIndex i = mxCalcSingleSubscript(m, idx, iterator.data());
     data[i] = val;
+}
+
+template<typename T>
+void assign_ndvector(const std::vector<T> &vec, std::vector<mwIndex> iterator, int idx, mxArray *m) {
+    for (int i=0; i<vec.size(); i++) {
+        iterator[idx] = i;
+        assign_ndvector(vec[i], iterator, idx+1, m);
+    }
 }
 
 template<typename T, typename = enable_if_prim<T> >
@@ -344,6 +345,9 @@ std::enable_if_t<is_complex<T>::value> cast_ptr_complex(const mxArray * m, int i
 class CellSaver;
 template<typename T, typename = decltype(save_load(std::declval<CellSaver&>(), std::declval<T&>()))>
 mxArray* to_mx_array(const T& t);
+class CellLoader;
+template<typename T, typename = decltype(save_load(std::declval<CellLoader&>(), std::declval<T&>()))>
+std::decay_t<T> mex_cast(const mxArray *m);
 
 class CellSaver {
     std::vector<mx_array_t> cells;
@@ -391,10 +395,11 @@ mxArray* to_mx_array(const T& t) {
     return c;
 }
 
-template<typename T, typename = decltype(save_load(std::declval<CellLoader&>(), std::declval<T&>()))>
+template<typename T, typename /* decltype(save_load(std::declval<CellLoader&>(), std::declval<T&>())) */ >
 std::decay_t<T> mex_cast(const mxArray *m) {
     CellLoader c(m);
     T t;
     save_load(c,t);
     return t;
+}
 }
