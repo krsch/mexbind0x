@@ -96,11 +96,11 @@ template<typename T, typename Type = void>
 using enable_if_prim = typename std::enable_if<get_mex_classid<T>::value != mxUNKNOWN_CLASS, Type>::type;
 
 template<typename T, typename Enable = void>
-struct mex_cast_visitor;
+struct from_mx_visitor;
 
-// mex_cast primitive types
+// from_mx primitive types
 template<typename T>
-struct mex_cast_visitor<T, std::enable_if_t<std::is_arithmetic<T>::value> > {
+struct from_mx_visitor<T, std::enable_if_t<std::is_arithmetic<T>::value> > {
     typedef T result_type;
     template<typename V>
         T run(const mxArray *m) {
@@ -110,9 +110,9 @@ struct mex_cast_visitor<T, std::enable_if_t<std::is_arithmetic<T>::value> > {
         }
 };
 
-// mex_cast flat collections
+// from_mx flat collections
 template<typename T>
-struct mex_cast_visitor<T,enable_if_prim<typename T::value_type> > {
+struct from_mx_visitor<T,enable_if_prim<typename T::value_type> > {
     typedef typename std::decay<T>::type result_type;
     template<typename V>
         T run(const mxArray *m) {
@@ -152,15 +152,15 @@ template<typename T> struct is_complex<std::complex<T>> : public std::true_type 
     typedef T type;
 };
 
-// mex_cast to mx_array_t
-mx_array_t mex_cast(const mxArray *arg) {
+// from_mx to mx_array_t
+mx_array_t from_mx(const mxArray *arg) {
     return {arg};
 }
 
-// mex_cast complex scalar
+// from_mx complex scalar
 template<typename T>
 typename std::enable_if<is_complex<T>::value, T >::type
-mex_cast(const mxArray *arg)
+from_mx(const mxArray *arg)
 {
     if (!mxIsScalar(arg))
         throw std::invalid_argument("should be scalar");
@@ -168,19 +168,19 @@ mex_cast(const mxArray *arg)
     return T(cast_ptr<T>(arg, mxGetData(arg)), cast_ptr<T>(arg, mxGetImagData(arg)));
 }
 
-// mex_cast generic pointer
+// from_mx generic pointer
 template<typename T>
 typename std::enable_if<std::is_pointer<T>::value, T>::type
-mex_cast(const mxArray *arg)
+from_mx(const mxArray *arg)
 {
     if (!mxIsInt8(arg) || mxGetNumberOfElements(arg) != sizeof(T))
         throw std::invalid_argument("Pointer should have been passed");
     return *(T*)mxGetData(arg);
 }
 
-// mex_cast matlab_string
+// from_mx matlab_string
 template<typename T, typename = typename std::enable_if<std::is_same<T,matlab_string>::value>::type>
-matlab_string mex_cast(const mxArray *arg)
+matlab_string from_mx(const mxArray *arg)
 {
     if (!mxIsChar(arg))
         throw std::invalid_argument("Expecting string");
@@ -189,21 +189,21 @@ matlab_string mex_cast(const mxArray *arg)
     return matlab_string(m, len);
 }
 
-// mex_cast classes that have can_mex_cast
+// from_mx classes that have can_mex_cast
 // these are the classes constructible from const mxArray*
 template<typename T>
 typename std::enable_if<T::can_mex_cast, T>::type
-mex_cast(const mxArray* a) {
+from_mx(const mxArray* a) {
     return T(a);
 }
 
-// mex_cast defined via mex_visitor
+// from_mx defined via mex_visitor
 template<typename T>
-typename mex_cast_visitor<T>::result_type
-mex_cast(const mxArray *arg)
+typename from_mx_visitor<T>::result_type
+from_mx(const mxArray *arg)
 {
     try{
-        return mex_visit(mex_cast_visitor<T>(),arg);
+        return mex_visit(from_mx_visitor<T>(),arg);
     } catch (...) {
         std::throw_with_nested(std::invalid_argument(
                 "while converting to " + get_type_name<T>()));
@@ -227,7 +227,7 @@ make_ndvector(NDArrayView<U,vector_rank<T>::value> v) {
 
 template<typename T>
 std::enable_if_t<(vector_rank<T>::value > 1),T>
-mex_cast(const mxArray *m)
+from_mx(const mxArray *m)
 {
     using value_type = ndvector_value_type_t<T>;
     NDArrayView<value_type,vector_rank<T>::value> v(m);
@@ -235,21 +235,21 @@ mex_cast(const mxArray *m)
 }
 
 template<typename T>
-mxArray *to_mx_array(T* arg) {
+mxArray *to_mx(T* arg) {
     mxArray *res = mxCreateNumericMatrix(sizeof(arg), 1, mxINT8_CLASS, mxREAL);
     *(T**)mxGetData(res) = arg;
     return res;
 }
 
 template<typename T>
-enable_if_prim<T,mxArray *> to_mx_array(T arg) {
+enable_if_prim<T,mxArray *> to_mx(T arg) {
     mxArray *res = mxCreateNumericMatrix(1, 1, get_mex_classid<T>::value, mxREAL);
     *(T*)mxGetData(res) = arg;
     return res;
 }
 
 template<typename T>
-enable_if_prim<typename T::value_type,mxArray *> to_mx_array(const T& arg) {
+enable_if_prim<typename T::value_type,mxArray *> to_mx(const T& arg) {
     typedef typename T::value_type V;
     mxArray *res = mxCreateNumericMatrix(arg.size(), 1, get_mex_classid<V>::value, mxREAL);
     V* ptr = (V*)mxGetData(res);
@@ -284,7 +284,7 @@ void assign_ndvector(std::complex<T> val, std::vector<mwIndex> iterator, int idx
 }
 
 template<typename T>
-mxArray *to_mx_array(const std::vector<T>& arg)
+mxArray *to_mx(const std::vector<T>& arg)
 {
     auto sz_size_t = ndvector_size(arg);
     std::vector<mwIndex> sz(sz_size_t.begin(), sz_size_t.end());
@@ -296,12 +296,12 @@ mxArray *to_mx_array(const std::vector<T>& arg)
     return res;
 }
 
-mxArray *to_mx_array(mx_array_t m) {
+mxArray *to_mx(mx_array_t m) {
     return const_cast<mxArray *>(m.m); // MATLAB makes it impossible pass argument from input to output
 }
 
 template<typename V, typename T>
-mxArray *convert_to_mx_array(const T& arg) {
+mxArray *to_mx_as(const T& arg) {
     mxArray *res = mxCreateNumericMatrix(arg.size(), 1, get_mex_classid<V>::value, mxREAL);
     V* ptr = (V*)mxGetData(res);
     for (auto r : arg) *ptr++ = r;
@@ -313,7 +313,7 @@ template<typename T> struct mx_store_by_move : std::false_type {};
 
 template<typename T>
 typename std::enable_if<mx_store_by_move<T>::value,mxArray *>::type
-to_mx_array(T&& arg)
+to_mx(T&& arg)
 {
     mxArray *res = mxCreateNumericMatrix(sizeof(T), 1, mxINT8_CLASS, mxREAL);
     new (mxGetData(res)) T(std::move(arg));
@@ -322,7 +322,7 @@ to_mx_array(T&& arg)
 
 template<typename T>
 typename std::enable_if<mx_store_by_move<T>::value, const T&>::type
-mex_cast(const mxArray *arg)
+from_mx(const mxArray *arg)
 {
     if (!mxIsInt8(arg) || mxGetNumberOfElements(arg) != sizeof(T))
         throw std::invalid_argument("Pointer should have been passed");
@@ -344,10 +344,10 @@ std::enable_if_t<is_complex<T>::value> cast_ptr_complex(const mxArray * m, int i
 
 class CellSaver;
 template<typename T, typename = decltype(save_load(std::declval<CellSaver&>(), std::declval<T&>()))>
-mxArray* to_mx_array(const T& t);
+mxArray* to_mx(const T& t);
 class CellLoader;
 template<typename T, typename = decltype(save_load(std::declval<CellLoader&>(), std::declval<T&>()))>
-std::decay_t<T> mex_cast(const mxArray *m);
+std::decay_t<T> from_mx(const mxArray *m);
 
 class CellSaver {
     std::vector<mx_array_t> cells;
@@ -363,7 +363,7 @@ public:
     }
     template<typename T>
     CellSaver& operator<<(const T& t) {
-        cells.push_back(to_mx_array(t));
+        cells.push_back(to_mx(t));
         return *this;
     }
     template<typename T>
@@ -379,7 +379,7 @@ public:
     CellLoader(const mxArray *m) : m(m) {}
     template<typename T>
         CellLoader& operator>>(T& t) {
-            t = mex_cast<T>(mxGetCell(m, idx++));
+            t = from_mx<T>(mxGetCell(m, idx++));
             return *this;
         }
     template<typename T>
@@ -389,14 +389,14 @@ public:
 };
 
 template<typename T, typename>
-mxArray* to_mx_array(const T& t) {
+mxArray* to_mx(const T& t) {
     CellSaver c;
     save_load(c,const_cast<T&>(t));
     return c;
 }
 
 template<typename T, typename /* decltype(save_load(std::declval<CellLoader&>(), std::declval<T&>())) */ >
-std::decay_t<T> mex_cast(const mxArray *m) {
+std::decay_t<T> from_mx(const mxArray *m) {
     CellLoader c(m);
     T t;
     save_load(c,t);

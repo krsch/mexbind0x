@@ -46,7 +46,7 @@ save_tuple(Tup &&tup, int nlhs, mxArray *plhs[])
 {
     if (i < nlhs || (i==0 && nlhs==0)) {
         try {
-            plhs[i] = to_mx_array(std::get<i>(tup));
+            plhs[i] = to_mx(std::get<i>(tup));
         } catch (...) {
             std::throw_with_nested(std::invalid_argument(
                         stringer("in output #", i)
@@ -59,7 +59,7 @@ save_tuple(Tup &&tup, int nlhs, mxArray *plhs[])
 template<typename T>
 typename T::first_type get_array(const mxArray* a[]) {
     try {
-        return mex_cast<typename T::first_type>(a[T::second_type::value]);
+        return from_mx<typename T::first_type>(a[T::second_type::value]);
     } catch (...) {
         std::throw_with_nested(argument_cast_exception(T::second_type::value));
     }
@@ -100,7 +100,7 @@ typename std::enable_if<!std::is_same<return_of<F>,void>::value>::type
 mexIt(F f, int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     decltype(auto) res = runIt(f,nrhs, prhs);
     try {
-        plhs[0] = to_mx_array(std::move(res));
+        plhs[0] = to_mx(std::move(res));
     } catch (...) {
         std::throw_with_nested(std::invalid_argument("in output #0"));
     }

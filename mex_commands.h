@@ -48,11 +48,11 @@ class MXCommands {
             if (classname == classname_read) {
                 matched = true;
                 if (command == "_free") {
-                    delete mex_cast<T*>(argin[1]);
+                    delete from_mx<T*>(argin[1]);
                 } else if (command == "_saveobj") {
-                    argout[0] = to_mx_array(*mex_cast<T*>(argin[1]));
+                    argout[0] = to_mx(*from_mx<T*>(argin[1]));
                 } else if (command == "_loadobj") {
-                    argout[0] = to_mx_array(new T(mex_cast<T>(argin[1])));
+                    argout[0] = to_mx(new T(from_mx<T>(argin[1])));
                 } else matched = false;
             }
             return *this;
