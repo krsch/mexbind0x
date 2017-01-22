@@ -24,4 +24,9 @@ You will likely need only one include: `mexbind0x/mex_commands.h`. There you can
 6. `flatten_exception()` — passes the current exception to the MATLAB.
 7. `mx_auto::as<base_type>(value)` — converts `value` to `mx_auto` with base type `base_type`. Useful if you want to return `std::vector<int>` as an array of `double`.
 
+There are two useful macros:
+
+1. `MEX_WRAP(f)` transforms `f` into `mexFunction`. Useful, if you only have one function.
+2. `MEX_SIMPLE(f)` where `void f(MXCommands &)` removes some boilerplate for exception handling and `MXCommands` creation.
+
 For more usage info see examples.

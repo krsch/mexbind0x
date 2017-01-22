@@ -131,4 +131,13 @@ class MXCommands {
             return matched;
         }
 };
+
+#define MEX_WRAP(f) void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray * prhs[]) { try { mexbind0x::mexIt(f,nlhs,plhs,nrhs,prhs); } catch(...) { mexbind0x::flatten_exception(); } }
+
+#define MEX_SIMPLE(f) void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray * prhs[]) {\
+    try {\
+        mexbind0x::MXCommands m(nlhs,plhs,nrhs,prhs);\
+        f(m);\
+        if (!m.has_matched()) throw std::invalid_argument("Command not found");\
+    } catch(...) { mexbind0x::flatten_exception(); } }
 }
