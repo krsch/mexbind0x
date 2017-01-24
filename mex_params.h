@@ -5,6 +5,7 @@
 #include <mex.h>
 #include <stdexcept>
 #include <sstream>
+#include <functional>
 
 namespace mexbind0x {
 // http://stackoverflow.com/questions/21806561/concatenating-strings-and-numbers-in-variadic-template-function
