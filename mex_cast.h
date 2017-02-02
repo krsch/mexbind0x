@@ -16,7 +16,6 @@
 #include "func_types.h"
 
 namespace mexbind0x {
-template<typename T> struct get_mex_classid;
 using matlab_string = std::basic_string<mxChar>;
 
 struct mx_array_t {
@@ -43,18 +42,32 @@ std::string get_type_name() {
     return {name};
 }
 
+template<int n, bool Signed>
+constexpr mxClassID int_classid = mxUNKNOWN_CLASS;
+template<> constexpr mxClassID int_classid<32, true> = mxINT32_CLASS;
+template<> constexpr mxClassID int_classid<32, false> = mxUINT32_CLASS;
+template<> constexpr mxClassID int_classid<64, true> = mxINT64_CLASS;
+template<> constexpr mxClassID int_classid<64, false> = mxUINT64_CLASS;
+template<typename T, typename = std::enable_if_t<std::is_integral<T>::value> >
+using get_int_classid = std::integral_constant<mxClassID, int_classid<sizeof(T)*CHAR_BIT, std::is_signed<T>::value>>;
+
+template<typename T> struct get_mex_classid;
 template<> struct get_mex_classid<int8_t> : std::integral_constant<mxClassID, mxINT8_CLASS> {};
 template<> struct get_mex_classid<uint8_t> : std::integral_constant<mxClassID, mxUINT8_CLASS> {};
 template<> struct get_mex_classid<int16_t> : std::integral_constant<mxClassID, mxINT16_CLASS> {};
 template<> struct get_mex_classid<uint16_t> : std::integral_constant<mxClassID, mxUINT16_CLASS> {};
-template<> struct get_mex_classid<int32_t> : std::integral_constant<mxClassID, mxINT32_CLASS> {};
-template<> struct get_mex_classid<uint32_t> : std::integral_constant<mxClassID, mxUINT32_CLASS> {};
-template<> struct get_mex_classid<int64_t> : std::integral_constant<mxClassID, mxINT64_CLASS> {};
-template<> struct get_mex_classid<uint64_t> : std::integral_constant<mxClassID, mxUINT64_CLASS> {};
 template<> struct get_mex_classid<float> : std::integral_constant<mxClassID, mxSINGLE_CLASS> {};
 template<> struct get_mex_classid<double> : std::integral_constant<mxClassID, mxDOUBLE_CLASS> {};
 template<> struct get_mex_classid<mxChar> : std::integral_constant<mxClassID, mxCHAR_CLASS> {};
 template<> struct get_mex_classid<mxLogical> : std::integral_constant<mxClassID, mxLOGICAL_CLASS> {};
+
+// STUPID CLANG ON MAC!!!
+template<> struct get_mex_classid<int> : get_int_classid<int> {};
+template<> struct get_mex_classid<long> : get_int_classid<long> {};
+template<> struct get_mex_classid<long long> : get_int_classid<long long> {};
+template<> struct get_mex_classid<unsigned int> : get_int_classid<unsigned int> {};
+template<> struct get_mex_classid<unsigned long> : get_int_classid<unsigned long> {};
+template<> struct get_mex_classid<unsigned long long> : get_int_classid<unsigned long long> {};
 
 template<typename F>
 typename F::result_type mex_visit(F f, const mxArray* m) {
@@ -269,7 +282,7 @@ template<typename T>
 void assign_ndvector(const std::vector<T> &vec, std::vector<mwIndex> iterator, int idx, mxArray *m) {
     for (int i=0; i<vec.size(); i++) {
         iterator[idx] = i;
-        assign_ndvector(vec[i], iterator, idx+1, m);
+        assign_ndvector((T)vec[i], iterator, idx+1, m);
     }
 }
 
