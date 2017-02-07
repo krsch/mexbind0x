@@ -239,13 +239,14 @@ make_ndvector(NDArrayView<U,vector_rank<T>::value> v) {
 }
 
 template<typename T>
-std::enable_if_t<(vector_rank<T>::value > 1),T>
-from_mx(const mxArray *m)
-{
-    using value_type = ndvector_value_type_t<T>;
-    NDArrayView<value_type,vector_rank<T>::value> v(m);
-    return make_ndvector<T>(v);
-}
+struct from_mx_visitor<T, std::enable_if_t<(vector_rank<T>::value > 1)> > {
+    typedef T result_type;
+    template<typename U>
+        T run(const mxArray *m) {
+            NDArrayView<U,vector_rank<T>::value> v(m);
+            return make_ndvector<T>(v);
+        }
+};
 
 template<typename T>
 mxArray *to_mx(T* arg) {

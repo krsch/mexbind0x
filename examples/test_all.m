@@ -4,6 +4,10 @@ mex -I.. one_func.cpp
 
 assert(funcs('add',1,2) == 3);
 assert(funcs('sub',1,2) == -1);
+assert(funcs('sum', eye(10)) == 10);
+assert(funcs('sum', 2*eye(10)) == 20);
+assert(funcs('sum bool', eye(10)) == 10);
+assert(funcs('sum bool', 2*eye(10)) == 10);
 [d,m] = funcs('divmod', 15, 7);
 assert(d == 2);
 assert(m == 1);
