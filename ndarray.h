@@ -175,6 +175,11 @@ struct NDArrayView {
 
     typename std::conditional<N==1,T&,NDArrayView<T,N-1>>::type
     operator[](int i) const {
+        return ndarray_curry_fast(*this,i);
+    }
+
+    typename std::conditional<N==1,T&,NDArrayView<T,N-1>>::type
+    at(int i) const {
         return ndarray_curry(*this,i);
     }
 
@@ -282,6 +287,23 @@ ndarray_curry(const NDArrayView<T,N> &a, int fix)
 
 template<typename T>
 T& ndarray_curry(const NDArrayView<T,1> &a, int fix)
+{
+    return a(fix);
+}
+
+
+template<typename T, int N>
+constexpr typename std::enable_if<(N>1), NDArrayView<T,N-1> >::type
+ndarray_curry_fast(const NDArrayView<T,N> &a, int fix) noexcept
+{
+    NDArrayView<T, N-1> result {.m_data = a.m_data + a.dimensions[0].strife * fix};
+    for (int i=0; i<N-1; i++)
+        result.dimensions[i] = a.dimensions[i+1];
+    return result;
+}
+
+template<typename T>
+constexpr T& ndarray_curry_fast(const NDArrayView<T,1> &a, int fix) noexcept
 {
     return a(fix);
 }
