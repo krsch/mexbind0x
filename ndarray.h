@@ -38,6 +38,10 @@ struct NDArrayView {
     NDArrayViewDimension dimensions[N];
 
     NDArrayView() = default;
+    NDArrayView(T* data, const NDArrayViewDimension dim[N])
+        : m_data(data) {
+            memcpy(dimensions, dim, sizeof(dimensions));
+        }
 
     template<typename IdxVec, typename = typename std::enable_if<!std::is_integral<IdxVec>::value>::type>
     T& operator() (const IdxVec& idx) const {
@@ -296,9 +300,9 @@ template<typename T, int N>
 constexpr typename std::enable_if<(N>1), NDArrayView<T,N-1> >::type
 ndarray_curry_fast(const NDArrayView<T,N> &a, int fix) noexcept
 {
-    NDArrayView<T, N-1> result {.m_data = a.m_data + a.dimensions[0].strife * fix};
-    for (int i=0; i<N-1; i++)
-        result.dimensions[i] = a.dimensions[i+1];
+    NDArrayView<T, N-1> result(
+        a.m_data + a.dimensions[0].strife * fix,
+        a.dimensions + 1);
     return result;
 }
 

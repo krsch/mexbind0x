@@ -191,17 +191,6 @@ from_mx(const mxArray *arg)
     return *(T*)mxGetData(arg);
 }
 
-// from_mx matlab_string
-template<typename T, typename = typename std::enable_if<std::is_same<T,matlab_string>::value>::type>
-matlab_string from_mx(const mxArray *arg)
-{
-    if (!mxIsChar(arg))
-        throw std::invalid_argument("Expecting string");
-    const mxChar *m = mxGetChars(arg);
-    const int len = mxGetNumberOfElements(arg);
-    return matlab_string(m, len);
-}
-
 // from_mx classes that have can_mex_cast
 // these are the classes constructible from const mxArray*
 template<typename T>
