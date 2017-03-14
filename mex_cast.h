@@ -357,7 +357,7 @@ class CellSaver {
 public:
     operator mxArray*() const {
         mxArray *res = mxCreateCellMatrix(cells.size(), 1);
-        for (int i=0; i<cells.size(); i++)
+        for (size_t i=0; i<cells.size(); i++)
             mxSetCell(res, i, const_cast<mxArray*>(cells[i].m));
         return res;
     }
