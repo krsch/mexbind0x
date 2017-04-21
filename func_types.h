@@ -30,6 +30,15 @@ template<typename T>
 using return_of = typename return_of_t<T>::type;
 
 template<typename T>
+struct is_tuple : public std::false_type {};
+template<typename ... Args>
+struct is_tuple<std::tuple<Args...>> : public std::true_type {};
+template<typename U, typename V>
+struct is_tuple<std::pair<U,V>> : public std::true_type {};
+template<typename T>
+static constexpr bool is_tuple_v = is_tuple<T>::value;
+
+template<typename T>
 struct type_t {
     typedef T type;
 };

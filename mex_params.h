@@ -39,7 +39,7 @@ bool mex_is_class(mxArray *arg) {
 template<int i=0, typename Tup>
 typename std::enable_if< i == std::tuple_size<Tup>::value, void>::type
 save_tuple(Tup &&tup, int nlhs, mxArray *plhs[])
-{}
+{} // Saved the last parameter
 
 template<int i=0, typename Tup>
 typename std::enable_if< (i < std::tuple_size<Tup>::value), void>::type
@@ -53,7 +53,7 @@ save_tuple(Tup &&tup, int nlhs, mxArray *plhs[])
                         stringer("in output #", i)
                         ));
         }
-        save_tuple<i+1,Tup&&>(std::move(tup), nlhs, plhs);
+        save_tuple<i+1,Tup>(std::move(tup), nlhs, plhs);
     }
 }
 
@@ -105,7 +105,7 @@ mexIt(F f, int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 }
 
 template<typename F>
-typename std::enable_if<!std::is_same<return_of<F>,void>::value>::type
+typename std::enable_if<!std::is_same<return_of<F>,void>::value && !is_tuple_v<return_of<F>> >::type
 mexIt(F f, int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     decltype(auto) res = runIt(f,nrhs, prhs);
     try {
