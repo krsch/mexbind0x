@@ -177,7 +177,6 @@ from_mx(const mxArray *arg)
 {
     if (!mxIsScalar(arg))
         throw std::invalid_argument("should be scalar");
-    typedef typename is_complex<T>::type U;
     return T(cast_ptr<T>(arg, mxGetData(arg)), cast_ptr<T>(arg, mxGetImagData(arg)));
 }
 
@@ -262,22 +261,22 @@ enable_if_prim<typename T::value_type,mxArray *> to_mx(const T& arg) {
 
 template<typename T, typename = enable_if_prim<T> >
 void assign_ndvector(T val, std::vector<mwIndex> iterator, int idx, mxArray *m) {
-    assert(idx == iterator.size());
+    assert((unsigned)idx == iterator.size());
     T *data = (T*)mxGetData(m);
     mwIndex i = mxCalcSingleSubscript(m, idx, iterator.data());
     data[i] = val;
 }
 
 template<typename T>
-void assign_ndvector(const std::vector<T> &vec, std::vector<mwIndex> iterator, int idx, mxArray *m) {
-    for (int i=0; i<vec.size(); i++) {
+void assign_ndvector(const std::vector<T> &vec, std::vector<mwIndex> iterator, mwSize idx, mxArray *m) {
+    for (size_t i=0; i<vec.size(); i++) {
         iterator[idx] = i;
         assign_ndvector((T)vec[i], iterator, idx+1, m);
     }
 }
 
 template<typename T, typename = enable_if_prim<T> >
-void assign_ndvector(std::complex<T> val, std::vector<mwIndex> iterator, int idx, mxArray *m) {
+void assign_ndvector(std::complex<T> val, std::vector<mwIndex> iterator, mwSize idx, mxArray *m) {
     assert(idx == iterator.size());
     T *data = (T*)mxGetData(m);
     T *imag_data = (T*)mxGetImagData(m);
