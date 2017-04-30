@@ -248,7 +248,7 @@ void limitNDArrayView(NDArrayView<T,N>& dst, const NDArrayViewDimension *src_dim
 }
 
 template<typename T, int N>
-void limitNDArrayView(NDArrayView<T,N>& dst, const NDArrayViewDimension *src_dim, size_t offset) {
+void limitNDArrayView(NDArrayView<T,N>&, const NDArrayViewDimension *, size_t offset) {
     assert(offset == N);
 }
 

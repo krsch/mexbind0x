@@ -66,32 +66,32 @@ auto count_args(types_t<T,T2,Args...>) {
 }
 
 template<typename F, typename R, typename ... Args>
-types_t<std::decay_t<Args>...> args_of_member(R (F::*f)(Args...)) {
+types_t<std::decay_t<Args>...> args_of_member(R (F::*)(Args...)) {
     return {};
 }
 
 template<typename F, typename R, typename ... Args>
-types_t<std::decay_t<Args>...> args_of_member(R (F::*f)(Args...) const) {
+types_t<std::decay_t<Args>...> args_of_member(R (F::*)(Args...) const) {
     return {};
 }
 
 template<typename F, typename = decltype(&F::operator())>
-auto args_of(F f) {
+auto args_of(F) {
     return args_of_member(&F::operator());
 }
 
 template<typename F, typename R, typename ... Args>
-types_t<F*,std::decay_t<Args>...> args_of(R (F::*f)(Args...)) {
+types_t<F*,std::decay_t<Args>...> args_of(R (F::*)(Args...)) {
     return {};
 }
 
 template<typename F, typename R, typename ... Args>
-types_t<F*,std::decay_t<Args>...> args_of(R (F::*f)(Args...) const) {
+types_t<F*,std::decay_t<Args>...> args_of(R (F::*)(Args...) const) {
     return {};
 }
 
 template<typename R, typename ... Args>
-types_t<std::decay_t<Args>...> args_of(R f(Args...)) {
+types_t<std::decay_t<Args>...> args_of(R (Args...)) {
     return {};
 }
 
@@ -110,7 +110,7 @@ void deleter2(const T& arg)
 template<typename T>
 struct vector_rank : public std::integral_constant<size_t, 0> {};
 template<typename T>
-struct vector_rank<std::vector<T>> 
+struct vector_rank<std::vector<T>>
     : public std::integral_constant<size_t, vector_rank<T>::value + 1> {};
 
 void calc_ndvector_size(...) {}
@@ -135,7 +135,7 @@ std::vector<size_t> ndvector_size(const std::vector<T> &vec)
 template<typename T>
 struct ndvector_value_type : public type_t<T> {};
 template<typename T>
-struct ndvector_value_type<std::vector<T>> 
+struct ndvector_value_type<std::vector<T>>
     : public ndvector_value_type<T> {};
 template<typename T>
 using ndvector_value_type_t = typename ndvector_value_type<T>::type;

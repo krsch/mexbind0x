@@ -48,9 +48,9 @@ public:
 
 // MXCommands allows you to dispatch a function based on argin[0]
 class MXCommands {
-    int nargout;
+    unsigned nargout;
     mxArray **argout;
-    int nargin;
+    unsigned nargin;
     const mxArray **argin;
     std::string command;
     bool matched = false;
@@ -110,7 +110,7 @@ class MXCommands {
                     std::vector<mx_auto> res = runIt(wrap_varargout(f,nargout,args_of(f)),nargin,argin);
                     if (nargout != res.size() && (nargout != 0 || res.size() != 1))
                         throw std::invalid_argument("cannot assign all output arguments");
-                    for (int i=0;i <res.size(); i++)
+                    for (size_t i=0;i <res.size(); i++)
                         argout[i] = res[i];
                 } catch (const std::exception &e) {
                     std::throw_with_nested(
