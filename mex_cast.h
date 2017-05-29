@@ -267,6 +267,14 @@ void assign_ndvector(T val, std::vector<mwIndex> iterator, int idx, mxArray *m) 
     data[i] = val;
 }
 
+template<typename T, size_t sz>
+void assign_ndvector(const T (&vec)[sz], std::vector<mwIndex> iterator, mwSize idx, mxArray *m) {
+    for (size_t i=0; i<sz; i++) {
+        iterator[idx] = i;
+        assign_ndvector((T)vec[i], iterator, idx+1, m);
+    }
+}
+
 template<typename T>
 void assign_ndvector(const std::vector<T> &vec, std::vector<mwIndex> iterator, mwSize idx, mxArray *m) {
     for (size_t i=0; i<vec.size(); i++) {

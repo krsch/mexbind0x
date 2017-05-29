@@ -112,8 +112,24 @@ struct vector_rank : public std::integral_constant<size_t, 0> {};
 template<typename T>
 struct vector_rank<std::vector<T>>
     : public std::integral_constant<size_t, vector_rank<T>::value + 1> {};
+template<typename T,size_t sz>
+struct vector_rank<T[sz]>
+    : public std::integral_constant<size_t, vector_rank<T>::value + 1> {};
 
 void calc_ndvector_size(...) {}
+
+template<typename T, size_t sz, typename It>
+void calc_ndvector_size(It it, const T (&vec)[sz]) {
+    *it = sz;
+    //for (const T &v : vec)
+        //if (v.size() != vec[0].size())
+            //throw std::invalid_argument("ndvector_size does only accepts rectangular-like multidimensional vectors");
+    if (vec.size() > 0)
+        calc_ndvector_size(it+1, vec[0]);
+    else
+        for (int i=0; i<vector_rank<T>::value; i++)
+            it[i+1] = 0;
+}
 
 template<typename T, typename It>
 void calc_ndvector_size(It it, const std::vector<T> &vec) {
@@ -121,7 +137,11 @@ void calc_ndvector_size(It it, const std::vector<T> &vec) {
     //for (const T &v : vec)
         //if (v.size() != vec[0].size())
             //throw std::invalid_argument("ndvector_size does only accepts rectangular-like multidimensional vectors");
-    calc_ndvector_size(it+1, vec[0]);
+    if (vec.size() > 0)
+        calc_ndvector_size(it+1, vec[0]);
+    else
+        for (int i=0; i<vector_rank<T>::value; i++)
+            it[i+1] = 0;
 }
 
 template<typename T>
@@ -136,6 +156,9 @@ template<typename T>
 struct ndvector_value_type : public type_t<T> {};
 template<typename T>
 struct ndvector_value_type<std::vector<T>>
+    : public ndvector_value_type<T> {};
+template<typename T, size_t sz>
+struct ndvector_value_type<T[sz]>
     : public ndvector_value_type<T> {};
 template<typename T>
 using ndvector_value_type_t = typename ndvector_value_type<T>::type;
