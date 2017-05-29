@@ -8,17 +8,6 @@
 #include <functional>
 
 namespace mexbind0x {
-// http://stackoverflow.com/questions/21806561/concatenating-strings-and-numbers-in-variadic-template-function
-template< typename ... Args >
-std::string stringer(Args const& ... args )
-{
-    std::ostringstream stream;
-    using List= int[];
-    (void)List{0, ( (void)(stream << args), 0 ) ... };
-
-    return stream.str();
-}
-
 class argument_cast_exception : public std::invalid_argument {
     const int arg_idx;
     public:

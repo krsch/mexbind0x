@@ -381,7 +381,9 @@ public:
     CellLoader(const mxArray *m) : m(m) {}
     template<typename T>
         CellLoader& operator>>(T& t) {
-            t = from_mx<T>(mxGetCell(m, idx++));
+            if (idx < mxGetNumberOfElements(m))
+                t = from_mx<T>(mxGetCell(m, idx++));
+            else throw std::out_of_range(stringer("CellLoader tried to load index ", idx, " of ", mxGetNumberOfElements(m)));
             return *this;
         }
     template<typename T>

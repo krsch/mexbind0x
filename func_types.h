@@ -139,3 +139,15 @@ struct ndvector_value_type<std::vector<T>>
     : public ndvector_value_type<T> {};
 template<typename T>
 using ndvector_value_type_t = typename ndvector_value_type<T>::type;
+
+// http://stackoverflow.com/questions/21806561/concatenating-strings-and-numbers-in-variadic-template-function
+template< typename ... Args >
+std::string stringer(Args const& ... args )
+{
+    std::ostringstream stream;
+    using List= int[];
+    (void)List{0, ( (void)(stream << args), 0 ) ... };
+
+    return stream.str();
+}
+
