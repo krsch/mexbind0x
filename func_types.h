@@ -144,10 +144,10 @@ void calc_ndvector_size(It it, const std::vector<T> &vec) {
             it[i+1] = 0;
 }
 
-template<typename T>
-std::vector<size_t> ndvector_size(const std::vector<T> &vec)
+template<typename size_type = size_t, typename T>
+std::array<size_type,vector_rank<T>::value+1> ndvector_size(const std::vector<T> &vec)
 {
-    std::vector<size_t> res(vector_rank<T>::value+1);
+    std::array<size_type,vector_rank<T>::value+1> res;
     calc_ndvector_size(res.begin(), vec);
     return res;
 }

@@ -221,7 +221,7 @@ template<typename T, typename U>
 std::enable_if_t<(vector_rank<T>::value > 1),T>
 make_ndvector(NDArrayView<U,vector_rank<T>::value> v) {
     T res(v.max(0));
-    for (int i=0; i<res.size(); i++)
+    for (size_t i=0; i<res.size(); i++)
         res[i] = make_ndvector<typename T::value_type>(v[i]);
     return res;
 }
@@ -259,36 +259,45 @@ enable_if_prim<typename T::value_type,mxArray *> to_mx(const T& arg) {
     return res;
 }
 
-template<typename T, typename = enable_if_prim<T> >
-void assign_ndvector(T val, std::vector<mwIndex> iterator, int idx, mxArray *m) {
+template<typename C>
+size_t matlab_index(const C& dim, const C& idx)
+{
+    size_t res = idx[idx.size()-1];
+    for (int i=idx.size()-2; i>=0; i--)
+        res = res * dim[i] + idx[i];
+    return res;
+}
+
+template<typename T, size_t N, typename = enable_if_prim<T> >
+void assign_ndvector(T val, std::array<mwIndex,N> &iterator, int idx, mxArray *m, const std::array<mwIndex,N> &dim) {
     assert((unsigned)idx == iterator.size());
     T *data = (T*)mxGetData(m);
-    mwIndex i = mxCalcSingleSubscript(m, idx, iterator.data());
+    size_t i = matlab_index(dim, iterator);
     data[i] = val;
 }
 
-template<typename T, size_t sz>
-void assign_ndvector(const T (&vec)[sz], std::vector<mwIndex> iterator, mwSize idx, mxArray *m) {
+template<typename T, size_t sz, size_t N>
+void assign_ndvector(const T (&vec)[sz], std::array<mwIndex,N> &iterator, mwSize idx, mxArray *m, const std::array<mwIndex,N> &dim) {
     for (size_t i=0; i<sz; i++) {
         iterator[idx] = i;
-        assign_ndvector((T)vec[i], iterator, idx+1, m);
+        assign_ndvector((T)vec[i], iterator, idx+1, m, dim);
     }
 }
 
-template<typename T>
-void assign_ndvector(const std::vector<T> &vec, std::vector<mwIndex> iterator, mwSize idx, mxArray *m) {
+template<typename T, size_t N>
+void assign_ndvector(const std::vector<T> &vec, std::array<mwIndex,N> &iterator, mwSize idx, mxArray *m, const std::array<mwIndex,N> &dim) {
     for (size_t i=0; i<vec.size(); i++) {
         iterator[idx] = i;
-        assign_ndvector((T)vec[i], iterator, idx+1, m);
+        assign_ndvector((T)vec[i], iterator, idx+1, m, dim);
     }
 }
 
-template<typename T, typename = enable_if_prim<T> >
-void assign_ndvector(std::complex<T> val, std::vector<mwIndex> iterator, mwSize idx, mxArray *m) {
+template<typename T, size_t N, typename = enable_if_prim<T> >
+void assign_ndvector(std::complex<T> val, std::array<mwIndex,N> &iterator, mwSize idx, mxArray *m, const std::array<mwIndex,N> &dim) {
     assert(idx == iterator.size());
     T *data = (T*)mxGetData(m);
     T *imag_data = (T*)mxGetImagData(m);
-    mwIndex i = mxCalcSingleSubscript(m, idx, iterator.data());
+    size_t i = matlab_index(dim, iterator);
     data[i] = std::real(val);
     imag_data[i] = std::imag(val);
 }
@@ -296,13 +305,12 @@ void assign_ndvector(std::complex<T> val, std::vector<mwIndex> iterator, mwSize 
 template<typename T>
 mxArray *to_mx(const std::vector<T>& arg)
 {
-    auto sz_size_t = ndvector_size(arg);
-    std::vector<mwIndex> sz(sz_size_t.begin(), sz_size_t.end());
+    auto sz = ndvector_size<mwIndex>(arg);
     using value_type = typename ndvector_value_type<T>::type;
     mxComplexity c = is_complex<value_type>::value?mxCOMPLEX:mxREAL;
     mxArray *res = mxCreateNumericArray(sz.size(), sz.data(), get_mex_classid<value_type>::value, c);
-    std::vector<mwIndex> iterator(sz.size());
-    assign_ndvector(arg, iterator, 0, res);
+    std::array<mwIndex, sz.size()> iterator;
+    assign_ndvector(arg, iterator, 0, res, sz);
     return res;
 }
 
