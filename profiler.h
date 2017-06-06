@@ -1,3 +1,4 @@
+#pragma once
 #ifdef PROFILE
 #include <callgrind.h>
 #endif

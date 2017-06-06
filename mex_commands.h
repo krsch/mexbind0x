@@ -1,5 +1,6 @@
 #pragma once
 #include "mex_params.h"
+#include "profiler.h"
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -55,6 +56,7 @@ class MXCommands {
     std::string command;
     bool matched = false;
     std::string classname_read;
+    Profiler _a;
     public:
         MXCommands(int nargout, mxArray *argout[], int nargin, const mxArray *argin[])
             : nargout(nargout), argout(argout), nargin(nargin-1), argin(argin+1)
@@ -132,7 +134,7 @@ class MXCommands {
         }
 };
 
-#define MEX_WRAP(f) void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray * prhs[]) { try { mexbind0x::mexIt(f,nlhs,plhs,nrhs,prhs); } catch(...) { mexbind0x::flatten_exception(); } }
+#define MEX_WRAP(f) void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray * prhs[]) { Profiler prof; try { mexbind0x::mexIt(f,nlhs,plhs,nrhs,prhs); } catch(...) { mexbind0x::flatten_exception(); } }
 
 #define MEX_SIMPLE(f) void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray * prhs[]) {\
     try {\
