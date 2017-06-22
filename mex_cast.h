@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <memory>
 #include <vector>
+#include <array>
 #include <cassert>
 #include "ndarray.h"
 #ifdef __GNUC__
