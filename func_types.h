@@ -1,5 +1,8 @@
 #pragma once
 #include <tuple>
+#include <sstream>
+#include <type_traits>
+#include <array>
 
 template<typename T, typename Enable = void> struct return_of_t;
 template<typename R, typename ... Args>
@@ -106,42 +109,62 @@ void deleter2(const T& arg)
     arg.~T();
 }
 
-#include <vector>
+template<typename T, typename = void>
+struct has_size : std::false_type {};
 template<typename T>
+struct has_size<T, std::enable_if_t<std::is_member_function_pointer<decltype(&T::size)>::value>> : std::true_type {};
+template<typename T>
+constexpr bool has_size_v = has_size<T>::value;
+
+template<typename T, typename = void>
+struct has_tuple_size : std::false_type {};
+template<typename T>
+struct has_tuple_size<T, std::enable_if_t<(std::tuple_size<T>::value>=0)> > : std::true_type {};
+template<typename T>
+constexpr bool has_tuple_size_v = has_tuple_size<T>::value;
+
+#include <vector>
+template<typename T, typename = void>
 struct vector_rank : public std::integral_constant<size_t, 0> {};
 template<typename T>
-struct vector_rank<std::vector<T>>
-    : public std::integral_constant<size_t, vector_rank<T>::value + 1> {};
+struct vector_rank<T, std::enable_if_t<has_size_v<T>> >
+    : public std::integral_constant<size_t, vector_rank<typename T::value_type>::value + 1> {};
 template<typename T,size_t sz>
 struct vector_rank<T[sz]>
     : public std::integral_constant<size_t, vector_rank<T>::value + 1> {};
+
+void calc_null_ndvector_size(...) {}
+
+template<typename It, typename T, size_t N = std::tuple_size<T>::value, typename = std::enable_if_t<has_size_v<T>> >
+void calc_null_ndvector_size(It it, const T *arr_null)
+{
+    *it = N;
+    calc_null_ndvector_size(++it, static_cast<const typename T::value_type*>(nullptr));
+}
+
+template<typename It, typename T, typename = std::enable_if_t<has_size_v<T> && !has_tuple_size_v<T>> >
+void calc_null_ndvector_size(It it, const T *arr_null)
+{
+    *it = 0;
+    calc_null_ndvector_size(++it, static_cast<const typename T::value_type*>(nullptr));
+}
 
 void calc_ndvector_size(...) {}
 
 template<typename T, size_t sz, typename It>
 void calc_ndvector_size(It it, const T (&vec)[sz]) {
     *it = sz;
-    //for (const T &v : vec)
-        //if (v.size() != vec[0].size())
-            //throw std::invalid_argument("ndvector_size does only accepts rectangular-like multidimensional vectors");
-    if (vec.size() > 0)
-        calc_ndvector_size(it+1, vec[0]);
-    else
-        for (int i=0; i<vector_rank<T>::value; i++)
-            it[i+1] = 0;
+    calc_ndvector_size(it+1, vec[0]);
 }
 
-template<typename T, typename It>
-void calc_ndvector_size(It it, const std::vector<T> &vec) {
-    *it = vec.size();
-    //for (const T &v : vec)
-        //if (v.size() != vec[0].size())
-            //throw std::invalid_argument("ndvector_size does only accepts rectangular-like multidimensional vectors");
-    if (vec.size() > 0)
+template<typename T, typename It, typename = std::enable_if_t<has_size_v<T>> >
+void calc_ndvector_size(It it, const T &vec) {
+    if (vec.size() > 0) {
+        *it = vec.size();
         calc_ndvector_size(it+1, vec[0]);
-    else
-        for (int i=0; i<vector_rank<T>::value; i++)
-            it[i+1] = 0;
+    } else calc_null_ndvector_size(it, &vec);
+        //for (int i=0; i<vector_rank<T>::value; i++)
+            //it[i+1] = 0;
 }
 
 template<typename size_type = size_t, typename T>
@@ -152,11 +175,11 @@ std::array<size_type,vector_rank<T>::value+1> ndvector_size(const std::vector<T>
     return res;
 }
 
-template<typename T>
+template<typename T, typename = void>
 struct ndvector_value_type : public type_t<T> {};
 template<typename T>
-struct ndvector_value_type<std::vector<T>>
-    : public ndvector_value_type<T> {};
+struct ndvector_value_type<T, std::enable_if_t<has_size_v<T>> >
+    : public ndvector_value_type<typename T::value_type> {};
 template<typename T, size_t sz>
 struct ndvector_value_type<T[sz]>
     : public ndvector_value_type<T> {};

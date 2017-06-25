@@ -264,7 +264,7 @@ template<typename C>
 size_t matlab_index(const C& dim, const C& idx)
 {
     size_t res = idx[idx.size()-1];
-    for (int i=idx.size()-2; i>=0; i--)
+    for (int i=(int)idx.size()-2; i>=0; i--)
         res = res * dim[i] + idx[i];
     return res;
 }
@@ -281,15 +281,15 @@ template<typename T, size_t sz, size_t N>
 void assign_ndvector(const T (&vec)[sz], std::array<mwIndex,N> &iterator, mwSize idx, mxArray *m, const std::array<mwIndex,N> &dim) {
     for (size_t i=0; i<sz; i++) {
         iterator[idx] = i;
-        assign_ndvector((T)vec[i], iterator, idx+1, m, dim);
+        assign_ndvector(static_cast<const T&>(vec[i]), iterator, idx+1, m, dim);
     }
 }
 
-template<typename T, size_t N>
-void assign_ndvector(const std::vector<T> &vec, std::array<mwIndex,N> &iterator, mwSize idx, mxArray *m, const std::array<mwIndex,N> &dim) {
+template<typename T, size_t N, typename = std::enable_if_t<has_size_v<T>> >
+void assign_ndvector(const T &vec, std::array<mwIndex,N> &iterator, mwSize idx, mxArray *m, const std::array<mwIndex,N> &dim) {
     for (size_t i=0; i<vec.size(); i++) {
         iterator[idx] = i;
-        assign_ndvector((T)vec[i], iterator, idx+1, m, dim);
+        assign_ndvector(static_cast<const typename T::value_type&>(vec[i]), iterator, idx+1, m, dim);
     }
 }
 
