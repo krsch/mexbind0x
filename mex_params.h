@@ -113,7 +113,7 @@ void flatten_exception_str(std::ostringstream &s, const std::exception &e) {
     }
 }
 
-[[noreturn]] void flatten_exception() {
+void flatten_exception() {
     char *c;
     try {
         throw;
