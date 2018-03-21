@@ -285,14 +285,6 @@ void assign_ndvector(const T (&vec)[sz], std::array<mwIndex,N> &iterator, mwSize
     }
 }
 
-template<typename T, size_t N, typename = std::enable_if_t<has_size_v<T>> >
-void assign_ndvector(const T &vec, std::array<mwIndex,N> &iterator, mwSize idx, mxArray *m, const std::array<mwIndex,N> &dim) {
-    for (size_t i=0; i<vec.size(); i++) {
-        iterator[idx] = i;
-        assign_ndvector(static_cast<const typename T::value_type&>(vec[i]), iterator, idx+1, m, dim);
-    }
-}
-
 template<typename T, size_t N, typename = enable_if_prim<T> >
 void assign_ndvector(std::complex<T> val, std::array<mwIndex,N> &iterator, mwSize idx, mxArray *m, const std::array<mwIndex,N> &dim) {
     assert(idx == iterator.size());
@@ -303,13 +295,24 @@ void assign_ndvector(std::complex<T> val, std::array<mwIndex,N> &iterator, mwSiz
     imag_data[i] = std::imag(val);
 }
 
+template<typename T, size_t N, typename = std::enable_if_t<has_size_v<T>> >
+void assign_ndvector(const T &vec, std::array<mwIndex,N> &iterator, mwSize idx, mxArray *m, const std::array<mwIndex,N> &dim) {
+    for (size_t i=0; i<vec.size(); i++) {
+        iterator[idx] = i;
+        assign_ndvector(static_cast<const typename T::value_type&>(vec[i]), iterator, idx+1, m, dim);
+    }
+}
+
+template<typename T> struct remove_complex : type_t<T> {};
+template<typename T> struct remove_complex<std::complex<T>> : type_t<T> {};
+
 template<typename T>
 mxArray *to_mx(const std::vector<T>& arg)
 {
     auto sz = ndvector_size<mwIndex>(arg);
     using value_type = typename ndvector_value_type<T>::type;
     mxComplexity c = is_complex<value_type>::value?mxCOMPLEX:mxREAL;
-    mxArray *res = mxCreateNumericArray(sz.size(), sz.data(), get_mex_classid<value_type>::value, c);
+    mxArray *res = mxCreateNumericArray(sz.size(), sz.data(), get_mex_classid<typename remove_complex<value_type>::type>::value, c);
     std::array<mwIndex, sz.size()> iterator;
     assign_ndvector(arg, iterator, 0, res, sz);
     return res;
