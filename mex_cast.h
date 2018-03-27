@@ -137,6 +137,34 @@ struct from_mx_visitor<T,enable_if_prim<typename T::value_type> > {
         }
 };
 
+template<typename T> struct is_complex : public std::false_type {};
+
+template<typename T> struct is_complex<std::complex<T>> : public std::true_type {
+    typedef T type;
+};
+
+// from_mx flat complex collections
+template<typename T>
+struct from_mx_visitor<T,std::enable_if_t<get_mex_classid<typename T::value_type::value_type>::value != mxUNKNOWN_CLASS && is_complex<typename T::value_type>::value > > {
+    typedef typename std::decay<T>::type result_type;
+    template<typename V>
+        T run(const mxArray *m) {
+            const V* real = reinterpret_cast<const V*>(mxGetData(m));
+            size_t sz = mxGetNumberOfElements(m);
+            using elem_t = typename T::value_type::value_type;
+            if (mxIsComplex(m)) {
+                const V* imag = reinterpret_cast<const V*>(mxGetImagData(m));
+                result_type res(sz);
+                for (size_t i=0; i<sz; ++i)
+                    res[i] = std::complex<elem_t>{static_cast<elem_t>(real[i]), static_cast<elem_t>(imag[i])};
+                return res;
+            } else
+                return result_type{real, real+sz};
+            //const V* end = begin + mxGetNumberOfElements(m);
+            //return result_type(begin,end);
+        }
+};
+
 template<typename T> T cast_ptr(const mxArray* m, void *ptr, int offset = 0) {
     mxClassID id = mxGetClassID(m);
     switch (id) {
@@ -159,12 +187,6 @@ template<typename T> T cast_ptr(const mxArray* m, void *ptr, int offset = 0) {
             throw std::invalid_argument(s);
     };
 }
-
-template<typename T> struct is_complex : public std::false_type {};
-
-template<typename T> struct is_complex<std::complex<T>> : public std::true_type {
-    typedef T type;
-};
 
 // from_mx to mx_array_t
 mx_array_t from_mx(const mxArray *arg) {
@@ -199,19 +221,6 @@ from_mx(const mxArray* a) {
     return T(a);
 }
 
-// from_mx defined via mex_visitor
-template<typename T>
-typename from_mx_visitor<T>::result_type
-from_mx(const mxArray *arg)
-{
-    try{
-        return mex_visit(from_mx_visitor<T>(),arg);
-    } catch (...) {
-        std::throw_with_nested(std::invalid_argument(
-                "while converting to " + get_type_name<T>()));
-    }
-}
-
 template<typename T, typename U>
 std::enable_if_t<(vector_rank<T>::value == 1),T>
 make_ndvector(NDArrayView<U,vector_rank<T>::value> v) {
@@ -236,6 +245,19 @@ struct from_mx_visitor<T, std::enable_if_t<(vector_rank<T>::value > 1)> > {
             return make_ndvector<T>(v);
         }
 };
+
+// from_mx defined via mex_visitor
+template<typename T>
+typename from_mx_visitor<T>::result_type
+from_mx(const mxArray *arg)
+{
+    try{
+        return mex_visit(from_mx_visitor<T>(),arg);
+    } catch (...) {
+        std::throw_with_nested(std::invalid_argument(
+                "while converting to " + get_type_name<T>()));
+    }
+}
 
 template<typename T>
 mxArray *to_mx(T* arg) {

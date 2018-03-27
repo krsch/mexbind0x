@@ -141,14 +141,14 @@ struct vector_rank<T[sz]>
 void calc_null_ndvector_size(...) {}
 
 template<typename It, typename T, size_t N = std::tuple_size<T>::value, typename = std::enable_if_t<has_size_v<T>> >
-void calc_null_ndvector_size(It it, const T *arr_null)
+void calc_null_ndvector_size(It it, const T *)
 {
     *it = N;
     calc_null_ndvector_size(++it, static_cast<const typename T::value_type*>(nullptr));
 }
 
 template<typename It, typename T, typename = std::enable_if_t<has_size_v<T> && !has_tuple_size_v<T>> >
-void calc_null_ndvector_size(It it, const T *arr_null)
+void calc_null_ndvector_size(It it, const T *)
 {
     *it = 0;
     calc_null_ndvector_size(++it, static_cast<const typename T::value_type*>(nullptr));
