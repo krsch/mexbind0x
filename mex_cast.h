@@ -309,6 +309,7 @@ void assign_ndvector(const T (&vec)[sz], std::array<mwIndex,N> &iterator, mwSize
 
 template<typename T, size_t N, typename = enable_if_prim<T> >
 void assign_ndvector(std::complex<T> val, std::array<mwIndex,N> &iterator, mwSize idx, mxArray *m, const std::array<mwIndex,N> &dim) {
+    (void)idx; // Silence warning when NDEBUG is set
     assert(idx == iterator.size());
     T *data = (T*)mxGetData(m);
     T *imag_data = (T*)mxGetImagData(m);

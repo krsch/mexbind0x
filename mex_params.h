@@ -59,6 +59,7 @@ template<typename F, typename ... Args>
 auto callFuncArgs(F f, const mxArray* prhs[], types_t<Args...>)
 -> decltype(f(get_array<Args>(prhs)...))
 {
+    (void)prhs; // Silence warning for nullary functions
     return f(get_array<Args>(prhs)...);
 }
 
