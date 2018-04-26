@@ -11,7 +11,7 @@ namespace mexbind0x {
 class argument_cast_exception : public std::invalid_argument {
     const int arg_idx;
     public:
-        argument_cast_exception(int arg_idx)
+        explicit argument_cast_exception(int arg_idx)
             : invalid_argument(stringer("in argument #", arg_idx))
             , arg_idx(arg_idx) {}
 
@@ -55,19 +55,30 @@ typename T::first_type get_array(const mxArray* a[]) {
     }
 }
 
+#ifdef __cpp_lib_invoke
 template<typename F, typename ... Args>
 auto callFuncArgs(F&& f, const mxArray* prhs[], types_t<Args...>)
 -> decltype(f(get_array<Args>(prhs)...))
 {
     (void)prhs; // Silence warning for nullary functions
-    return f(get_array<Args>(prhs)...);
+    return std::invoke(std::forward<F>(f), get_array<Args>(prhs)...);
+}
+#else
+template<typename F, typename ... Args>
+auto callFuncArgs(F&& f, const mxArray* prhs[], types_t<Args...>)
+-> decltype(f(get_array<Args>(prhs)...))
+{
+    (void)prhs; // Silence warning for nullary functions
+    return std::forward<F>(f)(get_array<Args>(prhs)...);
 }
 
 template<typename F, typename ... Args, typename = std::enable_if_t<std::is_member_pointer<F>::value > >
 auto callFuncArgs(F&& f, const mxArray* prhs[], types_t<Args...>)
 {
-    return std::bind(f, get_array<Args>(prhs)...)(); // as std::invoke is in c++17
+    (void)prhs; // Silence warning for nullary functions
+    return std::mem_fn(f)(get_array<Args>(prhs)...); // as std::invoke is in c++17
 }
+#endif
 
 template<typename F>
 auto runIt(F&& f, int nrhs, const mxArray *prhs[]) {
@@ -77,27 +88,27 @@ auto runIt(F&& f, int nrhs, const mxArray *prhs[]) {
                     "number of arguments mismatch: expected ", (int)counted_args.size,
                     ", received", nrhs
                     ));
-    return callFuncArgs(f, prhs, counted_args);
+    return callFuncArgs(std::forward<F>(f), prhs, counted_args);
 }
 
 template<typename F>
 typename std::enable_if<std::is_same<return_of<F>,void>::value>::type
 mexIt(F&& f, int, mxArray*[], int nrhs, const mxArray *prhs[]) {
-    runIt(f,nrhs, prhs);
+    runIt(std::forward<F>(f),nrhs, prhs);
 }
 
 template<typename F>
 typename std::enable_if<0 < std::tuple_size<return_of<F> >::value,void>::type
 mexIt(F&& f, int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     typedef return_of<F> Result;
-    Result res = runIt(f, nrhs, prhs);
+    Result res = runIt(std::forward<F>(f), nrhs, prhs);
     save_tuple(std::move(res), nlhs, plhs);
 }
 
 template<typename F>
 typename std::enable_if<!std::is_same<return_of<F>,void>::value && !is_tuple_v<return_of<F>> >::type
 mexIt(F&& f, int, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
-    decltype(auto) res = runIt(f,nrhs, prhs);
+    decltype(auto) res = runIt(std::forward<F>(f),nrhs, prhs);
     try {
         plhs[0] = to_mx(std::move(res));
     } catch (...) {

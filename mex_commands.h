@@ -93,7 +93,7 @@ class MXCommands {
             if (command == command_)
                 try {
                     matched = true;
-                    mexIt(f,nargout, argout, nargin, argin);
+                    mexIt(std::forward<F>(f),nargout, argout, nargin, argin);
                 } catch (const std::exception &e) {
                     std::throw_with_nested(
                             std::invalid_argument(
@@ -109,7 +109,7 @@ class MXCommands {
             if (command == command_) {
                 try {
                     matched = true;
-                    std::vector<mx_auto> res = runIt(wrap_varargout(f,nargout,args_of(f)),nargin,argin);
+                    std::vector<mx_auto> res = runIt(wrap_varargout(std::forward<F>(f),nargout,args_of(f)),nargin,argin);
                     if (nargout != res.size() && (nargout != 0 || res.size() != 1))
                         throw std::invalid_argument("cannot assign all output arguments");
                     for (size_t i=0;i <res.size(); i++)
