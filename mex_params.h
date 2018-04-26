@@ -56,7 +56,7 @@ typename T::first_type get_array(const mxArray* a[]) {
 }
 
 template<typename F, typename ... Args>
-auto callFuncArgs(F f, const mxArray* prhs[], types_t<Args...>)
+auto callFuncArgs(F&& f, const mxArray* prhs[], types_t<Args...>)
 -> decltype(f(get_array<Args>(prhs)...))
 {
     (void)prhs; // Silence warning for nullary functions
@@ -64,13 +64,13 @@ auto callFuncArgs(F f, const mxArray* prhs[], types_t<Args...>)
 }
 
 template<typename F, typename ... Args, typename = std::enable_if_t<std::is_member_pointer<F>::value > >
-auto callFuncArgs(F f, const mxArray* prhs[], types_t<Args...>)
+auto callFuncArgs(F&& f, const mxArray* prhs[], types_t<Args...>)
 {
     return std::bind(f, get_array<Args>(prhs)...)(); // as std::invoke is in c++17
 }
 
 template<typename F>
-auto runIt(F f, int nrhs, const mxArray *prhs[]) {
+auto runIt(F&& f, int nrhs, const mxArray *prhs[]) {
     auto counted_args = count_args(args_of(f));
     if (counted_args.size != nrhs)
         throw std::invalid_argument(stringer(
@@ -82,13 +82,13 @@ auto runIt(F f, int nrhs, const mxArray *prhs[]) {
 
 template<typename F>
 typename std::enable_if<std::is_same<return_of<F>,void>::value>::type
-mexIt(F f, int, mxArray*[], int nrhs, const mxArray *prhs[]) {
+mexIt(F&& f, int, mxArray*[], int nrhs, const mxArray *prhs[]) {
     runIt(f,nrhs, prhs);
 }
 
 template<typename F>
 typename std::enable_if<0 < std::tuple_size<return_of<F> >::value,void>::type
-mexIt(F f, int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+mexIt(F&& f, int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     typedef return_of<F> Result;
     Result res = runIt(f, nrhs, prhs);
     save_tuple(std::move(res), nlhs, plhs);
@@ -96,7 +96,7 @@ mexIt(F f, int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 template<typename F>
 typename std::enable_if<!std::is_same<return_of<F>,void>::value && !is_tuple_v<return_of<F>> >::type
-mexIt(F f, int, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+mexIt(F&& f, int, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     decltype(auto) res = runIt(f,nrhs, prhs);
     try {
         plhs[0] = to_mx(std::move(res));

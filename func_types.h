@@ -30,7 +30,7 @@ struct return_of_t<F,is_functor<F>> {
 };
 
 template<typename T>
-using return_of = typename return_of_t<T>::type;
+using return_of = typename return_of_t<std::remove_reference_t<T>>::type;
 
 template<typename T>
 struct is_tuple : public std::false_type {};
@@ -83,9 +83,9 @@ types_t<std::decay_t<Args>...> args_of_member(R (F::*)(Args...) const) {
     return {};
 }
 
-template<typename F, typename = decltype(&F::operator())>
-auto args_of(F) {
-    return args_of_member(&F::operator());
+template<typename F, typename = decltype(&std::remove_reference_t<F>::operator())>
+auto args_of(F&&) {
+    return args_of_member(&std::remove_reference_t<F>::operator());
 }
 
 template<typename F, typename R, typename ... Args>
@@ -138,7 +138,7 @@ template<typename T,size_t sz>
 struct vector_rank<T[sz]>
     : public std::integral_constant<size_t, vector_rank<T>::value + 1> {};
 
-void calc_null_ndvector_size(...) {}
+static void calc_null_ndvector_size(...) {}
 
 template<typename It, typename T, size_t N = std::tuple_size<T>::value, typename = std::enable_if_t<has_size_v<T>> >
 void calc_null_ndvector_size(It it, const T *)

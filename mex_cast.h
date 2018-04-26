@@ -37,7 +37,7 @@ std::string get_type_name() {
 #ifdef __GNUC__
     int status;
     std::unique_ptr<char, decltype(std::free) *>
-        demangled(abi::__cxa_demangle(name, 0, 0, &status), std::free);
+        demangled(abi::__cxa_demangle(name, nullptr, nullptr, &status), std::free);
     name = &*demangled;
 #endif
     return {name};
@@ -189,7 +189,7 @@ template<typename T> T cast_ptr(const mxArray* m, void *ptr, int offset = 0) {
 }
 
 // from_mx to mx_array_t
-mx_array_t from_mx(const mxArray *arg) {
+static inline mx_array_t from_mx(const mxArray *arg) {
     return {arg};
 }
 
@@ -341,7 +341,7 @@ mxArray *to_mx(const std::vector<T>& arg)
     return res;
 }
 
-mxArray *to_mx(mx_array_t m) {
+static inline mxArray *to_mx(mx_array_t m) {
     return const_cast<mxArray *>(m.m); // MATLAB makes it impossible pass argument from input to output
 }
 
@@ -449,4 +449,4 @@ std::decay_t<T> from_mx(const mxArray *m) {
     save_load(c,t);
     return t;
 }
-}
+} // namespace mexbind0x

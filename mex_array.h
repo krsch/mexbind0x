@@ -60,4 +60,4 @@ struct MXTyped1DArray {
         return cast_ptr_complex<T>(m,idx);
     }
 };
-}
+} // namespace mexbind0x
