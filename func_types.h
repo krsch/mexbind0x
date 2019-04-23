@@ -25,7 +25,7 @@ template<typename F, typename = decltype(&F::operator())>
 using is_functor = void;
 
 template<typename F>
-struct return_of_t<F,is_functor<F>> {
+struct return_of_t<F,decltype(&F::operator(),void())> {
     typedef typename return_of_t<decltype(&F::operator())>::type type;
 };
 

@@ -246,6 +246,12 @@ struct from_mx_visitor<T, std::enable_if_t<(vector_rank<T>::value > 1)> > {
         }
 };
 
+// from_mx std::string
+template<typename T, typename = std::enable_if_t<std::is_same<T,std::string>::value> >
+static inline T from_mx(const mxArray *arg) {
+    return {mxArrayToUTF8String(arg)};
+}
+
 // from_mx defined via mex_visitor
 template<typename T>
 typename from_mx_visitor<T>::result_type
