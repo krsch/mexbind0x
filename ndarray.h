@@ -34,6 +34,8 @@ namespace limits {
 
 template<typename T, int N>
 struct NDArrayView {
+    static constexpr bool can_mex_cast = true;
+    using value_type = std::conditional_t<N == 1, T, NDArrayView<T, N-1>>;
     T* m_data;
     NDArrayViewDimension dimensions[N];
 

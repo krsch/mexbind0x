@@ -125,8 +125,18 @@ struct from_mx_visitor<T, std::enable_if_t<std::is_arithmetic<T>::value> > {
 };
 
 // from_mx flat collections
-template<typename T>
-struct from_mx_visitor<T,enable_if_prim<typename T::value_type> > {
+template<typename T, typename En = void>
+struct is_flat_collection : public std::false_type {};
+template <typename T>
+struct is_flat_collection<T, decltype(T{std::declval<typename T::value_type *>(),
+                                        std::declval<typename T::value_type *>()},
+                                      (void)0)>
+    : public std::true_type {
+};
+template <typename T>
+struct from_mx_visitor<
+    T, enable_if_prim<typename T::value_type,
+                      std::enable_if_t<is_flat_collection<T>::value>>> {
     typedef typename std::decay<T>::type result_type;
     template<typename V>
         T run(const mxArray *m) {
@@ -237,7 +247,7 @@ make_ndvector(NDArrayView<U,vector_rank<T>::value> v) {
 }
 
 template<typename T>
-struct from_mx_visitor<T, std::enable_if_t<(vector_rank<T>::value > 1)> > {
+struct from_mx_visitor<T, std::enable_if_t<(vector_rank<T>::value > 1 && is_flat_collection<T>::value)> > {
     typedef T result_type;
     template<typename U>
         T run(const mxArray *m) {

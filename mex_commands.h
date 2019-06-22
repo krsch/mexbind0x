@@ -27,6 +27,7 @@ public:
     mx_auto(T&& val) : val(to_mx(std::forward<T>(val))) {}
 
     mx_auto(mxArray *val) : val(val) {}
+    mx_auto(mx_array_t val) : val(val) {}
 
     template<typename T, typename U>
     static mx_auto as(U&& val) {
@@ -36,6 +37,14 @@ public:
     template<typename T>
     operator T() const {
         return from_mx<T>(val);
+    }
+
+    operator mx_array_t() {
+        return val;
+    }
+
+    operator const mx_array_t() const {
+        return val;
     }
 
     operator mxArray*() {
