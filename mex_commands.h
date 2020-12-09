@@ -34,10 +34,11 @@ public:
         return mx_auto(to_mx_as<T>(std::forward<U>(val)));
     }
 
-    template<typename T>
-    operator T() const {
-        return from_mx<T>(val);
-    }
+    template <typename T> operator T() const { return from_mx<T>(val); }
+
+    template <typename T> T get() const { return from_mx<T>(val); }
+
+    const char* c_str() const { return mxArrayToUTF8String(val); }
 
     operator mx_array_t() {
         return val;
@@ -54,7 +55,23 @@ public:
     operator const mxArray*() const {
         return val;
     }
+
+    mx_auto operator[](int idx) {
+        return mxGetCell(val, idx);
+    }
+
+    size_t size() const {
+        return mxGetNumberOfElements(val);
+    }
 };
+
+template<>
+struct has_size<mx_auto> : std::false_type {};
+
+mx_auto from_mx(mxArray const* m, type_t<mx_auto>)
+{
+    return {const_cast<mxArray*>(m)};
+}
 
 // MXCommands allows you to dispatch a function based on argin[0]
 class MXCommands {

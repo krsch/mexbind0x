@@ -259,7 +259,17 @@ struct from_mx_visitor<T, std::enable_if_t<(vector_rank<T>::value > 1 && is_flat
 // from_mx std::string
 template<typename T, typename = std::enable_if_t<std::is_same<T,std::string>::value> >
 static inline T from_mx(const mxArray *arg) {
-    return {mxArrayToUTF8String(arg)};
+    if (mxIsChar(arg))
+        return {mxArrayToUTF8String(arg)};
+    mexErrMsgIdAndTxt("mexbind0x:expected_string", "Expected string, got %s\n",
+                      mxGetClassName(arg));
+    throw std::runtime_error("unreachable");
+}
+
+template <typename T, typename Result = decltype(from_mx(nullptr, type_t<T>()))>
+static inline Result from_mx(const mxArray* arg)
+{
+    return from_mx(arg, type_t<T>());
 }
 
 // from_mx defined via mex_visitor

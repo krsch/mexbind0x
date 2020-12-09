@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <array>
 
+namespace mexbind0x {
 template<typename T, typename Enable = void> struct return_of_t;
 template<typename R, typename ... Args>
 struct return_of_t<R (Args...)> {
@@ -201,4 +202,4 @@ std::string stringer(Args const& ... args )
 
     return stream.str();
 }
-
+} // namespace mexbind0x
