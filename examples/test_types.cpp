@@ -1,4 +1,4 @@
-#include <mex_commands.h>
+#include "../mex_commands.h"
 #include <mex.h>
 
 using namespace std;

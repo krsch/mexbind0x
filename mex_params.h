@@ -58,7 +58,7 @@ typename T::first_type get_array(const mxArray* a[]) {
 #ifdef __cpp_lib_invoke
 template<typename F, typename ... Args>
 auto callFuncArgs(F&& f, const mxArray* prhs[], types_t<Args...>)
--> decltype(f(get_array<Args>(prhs)...))
+-> std::invoke_result_t<F, decltype(get_array<Args>(prhs))...>
 {
     (void)prhs; // Silence warning for nullary functions
     return std::invoke(std::forward<F>(f), get_array<Args>(prhs)...);

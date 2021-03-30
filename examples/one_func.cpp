@@ -1,4 +1,4 @@
-#include "mex_commands.h"
+#include "../mex_commands.h"
 
 int square(int a) {
     return a*a;

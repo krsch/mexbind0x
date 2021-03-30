@@ -1,4 +1,4 @@
-#include <mex_commands.h>
+#include "../mex_commands.h"
 #include <vector>
 
 using namespace mexbind0x;
