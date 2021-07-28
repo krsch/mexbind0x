@@ -125,13 +125,12 @@ struct from_mx_visitor<T, std::enable_if_t<std::is_arithmetic<T>::value> > {
 };
 
 // from_mx flat collections
-template<typename T, typename En = void>
-struct is_flat_collection : public std::false_type {};
 template <typename T>
-struct is_flat_collection<T, decltype(T{std::declval<typename T::value_type *>(),
-                                        std::declval<typename T::value_type *>()},
-                                      (void)0)>
-    : public std::true_type {
+struct is_flat_collection
+    : std::integral_constant<
+          bool,
+          std::is_constructible<T, int const*, int const*>::value &&
+              std::is_constructible<T, float const*, float const*>::value> {
 };
 template <typename T>
 struct from_mx_visitor<
