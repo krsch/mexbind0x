@@ -120,7 +120,7 @@ class MXCommands {
                 try {
                     matched = true;
                     mexIt(std::forward<F>(f),nargout, argout, nargin, argin);
-                } catch (const std::exception &e) {
+                } catch (const std::exception &) {
                     std::throw_with_nested(
                             std::invalid_argument(
                                 stringer("When calling \"",command,'"')

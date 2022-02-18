@@ -202,4 +202,41 @@ std::string stringer(Args const& ... args )
 
     return stream.str();
 }
+
+template<typename To, typename Iterator>
+struct converting_iterator : public
+                             std::iterator<std::forward_iterator_tag,
+                             To>{
+    Iterator it;
+    explicit converting_iterator(Iterator it) : it(it) {}
+    To operator*() const {
+        return static_cast<To>(*it);
+    }
+
+    converting_iterator& operator++() {
+        ++it;
+        return *this;
+    }
+
+    converting_iterator operator++(int) {
+        return converting_iterator(it++);
+    }
+
+    friend bool operator==(converting_iterator const &a,
+                           converting_iterator const &b) {
+        return a.it == b.it;
+    }
+
+    friend bool operator!=(converting_iterator const &a,
+                           converting_iterator const &b) {
+        return a.it != b.it;
+    }
+};
+
+template<typename To, typename Iterator>
+converting_iterator<To, Iterator> make_converting_iterator(Iterator
+                                                           it) {
+    return converting_iterator<To, Iterator>{it};
+}
+
 } // namespace mexbind0x

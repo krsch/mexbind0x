@@ -142,7 +142,9 @@ struct from_mx_visitor<
             if (mxIsComplex(m)) throw std::invalid_argument("should be real");
             const V* begin = reinterpret_cast<const V*>(mxGetData(m));
             const V* end = begin + mxGetNumberOfElements(m);
-            return result_type(begin,end);
+            return
+                result_type(make_converting_iterator<T::value_type>(begin),
+                            make_converting_iterator<T::value_type>(end));
         }
 };
 
@@ -168,7 +170,10 @@ struct from_mx_visitor<T,std::enable_if_t<get_mex_classid<typename T::value_type
                     res[i] = std::complex<elem_t>{static_cast<elem_t>(real[i]), static_cast<elem_t>(imag[i])};
                 return res;
             } else
-                return result_type{real, real+sz};
+                // Double cast to avoid C4244
+                return
+                    result_type(make_converting_iterator<T::value_type>(make_converting_iterator<T::value_type::value_type>(real)),
+                                make_converting_iterator<T::value_type>(make_converting_iterator<T::value_type::value_type>(real+sz)));
             //const V* end = begin + mxGetNumberOfElements(m);
             //return result_type(begin,end);
         }
@@ -317,8 +322,8 @@ size_t matlab_index(const C& dim, const C& idx)
 }
 
 template<typename T, size_t N, typename = enable_if_prim<T> >
-void assign_ndvector(T val, std::array<mwIndex,N> &iterator, int idx, mxArray *m, const std::array<mwIndex,N> &dim) {
-    assert((unsigned)idx == iterator.size());
+void assign_ndvector(T val, std::array<mwIndex,N> &iterator, mwSize idx, mxArray *m, const std::array<mwIndex,N> &dim) {
+    assert(idx == iterator.size());
     T *data = (T*)mxGetData(m);
     size_t i = matlab_index(dim, iterator);
     data[i] = val;
