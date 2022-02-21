@@ -143,8 +143,8 @@ struct from_mx_visitor<
             const V* begin = reinterpret_cast<const V*>(mxGetData(m));
             const V* end = begin + mxGetNumberOfElements(m);
             return
-                result_type(make_converting_iterator<T::value_type>(begin),
-                            make_converting_iterator<T::value_type>(end));
+                result_type(make_converting_iterator<typename T::value_type>(begin),
+                            make_converting_iterator<typename T::value_type>(end));
         }
 };
 
@@ -172,8 +172,8 @@ struct from_mx_visitor<T,std::enable_if_t<get_mex_classid<typename T::value_type
             } else
                 // Double cast to avoid C4244
                 return
-                    result_type(make_converting_iterator<T::value_type>(make_converting_iterator<T::value_type::value_type>(real)),
-                                make_converting_iterator<T::value_type>(make_converting_iterator<T::value_type::value_type>(real+sz)));
+                    result_type(make_converting_iterator<typename T::value_type>(make_converting_iterator<typename T::value_type::value_type>(real)),
+                                make_converting_iterator<typename T::value_type>(make_converting_iterator<typename T::value_type::value_type>(real+sz)));
             //const V* end = begin + mxGetNumberOfElements(m);
             //return result_type(begin,end);
         }
